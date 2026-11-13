@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="color-scheme" content="dark" />
+  <title>Unmatched Турнир</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ЭКРАН ВХОДА -->
+  <div id="loginScreen" class="screen active">
+    <div class="login-box">
+      <h1>UNMATCHED</h1>
+      <p class="subtitle">Турнирный модуль</p>
+
+      <div class="input-group">
+        <label>Код комнаты</label>
+        <input type="text" id="roomCodeInput" placeholder="A7B2" maxlength="6" style="text-transform: uppercase;" />
+      </div>
+
+      <div class="input-group">
+        <label>Ваш логин</label>
+        <input type="text" id="playerNameInput" placeholder="Имя героя" />
+      </div>
+
+      <button id="loginBtn" class="btn btn-primary">Войти в турнир</button>
+    </div>
+  </div>
+
+  <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
+  <div id="appScreen" class="screen">
+    <nav class="sidebar">
+      <div class="brand">U</div>
+
+      <button class="nav-btn active" data-tab="leaders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span>Лидеры</span>
+      </button>
+
+      <button class="nav-btn" data-tab="match">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 13l3 3M5 14l4 4M7 17l-3 3M3 21l3-3"/></svg>
+        <span>Мой Матч</span>
+      </button>
+
+      <button class="nav-btn" data-tab="heroes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Герои</span>
+      </button>
+
+      <!-- НОВАЯ ВКЛАДКА ИНФО -->
+      <button class="nav-btn" data-tab="info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>Инфо</span>
+      </button>
+
+      <button class="nav-btn" onclick="logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Выход</span>
+      </button>
+    </nav>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="room-info">Комната: <span id="uiRoomCode" class="badge">----</span></div>
+        <div class="round-info">Раунд <span id="uiRound">0</span></div>
+      </header>
+
+      <!-- Вкладка: Лидеры -->
+      <div id="tab-leaders" class="tab-pane active">
+        <h2>Таблица лидеров</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Игрок</th>
+                <th>Очки</th>
+                <th>Коэф. Бухгольца</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Вкладка: Мой Матч -->
+      <div id="tab-match" class="tab-pane">
+        <h2>Ваш текущий матч</h2>
+        <div id="matchContent" class="match-card">
+          <!-- Рендерится через JS -->
+        </div>
+      </div>
+
+      <!-- Вкладка: Мои Герои -->
+      <div id="tab-heroes" class="tab-pane">
+        <h2>Мои герои</h2>
+        <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 14px;">Этих героев вам назначил организатор турнира.</p>
+        <div class="heroes-grid" id="heroesGrid">
+          <!-- Рендерится через JS -->
+        </div>
+      </div>
+
+      <!-- Вкладка: Инфо -->
+      <div id="tab-info" class="tab-pane">
+        <h2>Информация о турнире</h2>
+
+        <div class="admin-panel" style="margin-bottom: 20px;">
+          <h3>Начисление очков</h3>
+          <ul style="color: var(--text-muted); font-size: 14px; line-height: 1.6; padding-left: 20px;">
+            <li><b>Победа во встрече (2:0)</b> — 3 турнирных очка.</li>
+            <li><b>Ничья во встрече (1:1)</b> — 1 турнирное очко каждому.</li>
+            <li><b>Поражение (0:2)</b> — 0 очков.</li>
+          </ul>
+        </div>
+
+        <div class="admin-panel" style="margin-bottom: 20px;">
+          <h3>Коэф. Бухгольца</h3>
+          <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">
+            Это сумма всех турнирных очков ваших соперников по всем раундам. Используется как первый тай-брейк при равенстве основных очков.
+            <br><br>
+            <i>Важно: игры с ботами дают 0 очков в этот коэффициент, чтобы не искажать статистику.</i>
+          </p>
+        </div>
+
+        <div class="admin-panel" style="margin-bottom: 20px;">
+          <h3>Подбор соперников (Швейцарская система)</h3>
+          <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">
+            В каждом новом раунде вы играете с соперником, у которого примерно столько же очков, сколько у вас. Повторные встречи с одними и теми же людьми не допускаются, пока это возможно.
+          </p>
+        </div>
+
+        <div class="admin-panel">
+          <h3>Боты и пропуски</h3>
+          <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">
+            Если вам достался «Бот» (игрок с пометкой [БОТ]), это значит, что в данном раунде вам не хватило живого соперника. Бот всегда проигрывает (вы получаете 2:0), но при равенстве очков с другими игроками приоритет будет у того, кто с ботами не играл.
+          </p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

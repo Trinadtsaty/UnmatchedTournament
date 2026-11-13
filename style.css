@@ -1,0 +1,285 @@
+/* ==========================================================================
+   1. Переменные и базовые настройки
+   ========================================================================== */
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a20;
+  --surface-2: #24242d;
+  --border: #33333f;
+  --text: #f0f0f5;
+  --text-muted: #8b8b99;
+  --primary: #e03e3e;
+  --primary-hover: #c92c2c;
+  --success: #22c55e;
+  --warning: #eab308;
+  --danger: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.screen { display: none; height: 100%; width: 100%; }
+.screen.active { display: flex; }
+
+/* ==========================================================================
+   2. Общие элементы (Кнопки, поля)
+   ========================================================================== */
+.btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 12px; border: none; border-radius: 8px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; text-decoration: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-win { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+.btn-win:hover:not(:disabled) { background: var(--success); color: #000; }
+.btn-draw { background: rgba(234, 179, 8, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+.btn-draw:hover:not(:disabled) { background: var(--warning); color: #000; }
+.btn-lose { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+.btn-lose:hover:not(:disabled) { background: var(--danger); color: white; }
+
+.input-group { margin-bottom: 20px; text-align: left; }
+.input-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.input-group input, .field input, .field select {
+  width: 100%; padding: 12px 16px; background: #000; border: 1px solid var(--border);
+  border-radius: 8px; color: white; font-size: 16px; outline: none; transition: border 0.2s;
+}
+.input-group input:focus, .field input:focus, .field select:focus { border-color: var(--primary); }
+.field { margin-bottom: 15px; }
+.field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+
+/* ==========================================================================
+   3. Экран входа
+   ========================================================================== */
+#loginScreen {
+  align-items: center; justify-content: center;
+  background: radial-gradient(circle at center, #1a1a20 0%, #0f0f13 100%);
+  padding: 20px; position: absolute; inset: 0; z-index: 1000;
+}
+.login-box {
+  width: 100%; max-width: 400px; background: var(--surface);
+  padding: 40px; border-radius: 16px; border: 1px solid var(--border);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center;
+}
+.login-box h1 { font-size: 28px; letter-spacing: 2px; margin-bottom: 4px; }
+.subtitle { color: var(--primary); font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 30px; }
+
+/* ==========================================================================
+   4. Игрок (Мобильный и ПК интерфейс)
+   ========================================================================== */
+#appScreen { flex-direction: column; }
+
+@media (min-width: 769px) {
+  #appScreen { flex-direction: row; }
+  .sidebar {
+    flex-direction: column; width: 240px; justify-content: flex-start;
+    padding: 20px; border-right: 1px solid var(--border); gap: 10px; background: var(--surface);
+  }
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .brand { font-size: 32px; font-weight: 900; color: var(--primary); text-align: center; margin-bottom: 30px; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 12px; background: none; border: none;
+    color: var(--text-muted); padding: 12px 16px; border-radius: 8px; cursor: pointer;
+    font-size: 15px; transition: all 0.2s; text-align: left; width: 100%;
+  }
+  .nav-btn:hover { background: var(--surface-2); color: white; }
+  .nav-btn.active { background: var(--surface-2); color: var(--primary); font-weight: 600; }
+  .nav-btn svg { width: 20px; height: 20px; }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: flex; flex-direction: row; justify-content: space-around;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 8px 0; padding-bottom: env(safe-area-inset-bottom); order: 2;
+  }
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; order: 1; }
+  .brand { display: none; }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 4px; font-size: 10px; background: none; border: none;
+    color: var(--text-muted); padding: 8px 0;
+  }
+  .nav-btn svg { width: 22px; height: 22px; }
+  .nav-btn.active { color: var(--primary); }
+}
+
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.room-info { font-size: 14px; color: var(--text-muted); }
+.badge { background: var(--surface-2); color: white; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-family: monospace; letter-spacing: 1px; }
+.round-info { font-size: 14px; font-weight: 600; color: var(--primary); }
+
+.tab-pane { display: none; padding: 24px; overflow-y: auto; flex: 1; }
+.tab-pane.active { display: block; }
+h2 { font-size: 20px; margin-bottom: 20px; }
+
+.table-wrap { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { background: var(--surface-2); padding: 14px 16px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
+td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 15px; }
+tr:last-child td { border-bottom: none; }
+tr.me { background: rgba(224, 62, 62, 0.1); border-left: 3px solid var(--primary); }
+
+.match-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 600px; margin: 0 auto; }
+.match-table-num { font-size: 14px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 20px; text-align: center; }
+.vs-block { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.player-block { flex: 1; text-align: center; }
+.player-name { font-size: 18px; font-weight: 700; }
+.vs-text { font-size: 24px; font-style: italic; font-weight: 900; color: var(--border); margin: 0 20px; }
+.actions-block { display: flex; flex-direction: column; gap: 12px; }
+
+/* ==========================================================================
+   5. Админ-панель
+   ========================================================================== */
+.nav-tab {
+  background: none; border: none; color: var(--text-muted); font-size: 15px; font-weight: 500;
+  padding: 10px 16px; cursor: pointer; transition: color 0.2s; border-bottom: 2px solid transparent;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.tab-content { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.tab-content.active { display: flex; }
+
+.room-sidebar {
+  width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+  padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex-shrink: 0;
+}
+
+.room-card {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--surface-2); padding: 12px; border-radius: 8px;
+  cursor: pointer; border: 2px solid transparent; transition: all 0.2s; gap: 8px;
+}
+.room-card:hover { border-color: var(--border); }
+.room-card.active { border-color: var(--primary); background: rgba(224, 62, 62, 0.1); }
+.room-card-info { flex: 1; min-width: 0; }
+.room-card-info strong { display: block; font-size: 15px; color: var(--text); font-family: monospace; letter-spacing: 1px; }
+.room-card-info strong.copy-code:hover { color: var(--primary); text-shadow: 0 0 10px rgba(224, 62, 62, 0.6); }
+.room-card-info span { font-size: 11px; color: var(--text-muted); }
+
+.delete-x {
+  background: none; border: 1px solid var(--border); color: var(--danger);
+  cursor: pointer; font-size: 18px; font-weight: bold; width: 30px; height: 30px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.2s; line-height: 1;
+}
+.delete-x:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+.admin-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.admin-panel h3 { font-size: 16px; margin-bottom: 15px; }
+
+/* ==========================================================================
+   6. Модальные окна (Баннеры)
+   ========================================================================== */
+.modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85); z-index: 5000;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal.active { display: flex; }
+.modal-content {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; width: 100%; max-width: 500px;
+  position: relative; max-height: 90vh; overflow-y: auto;
+}
+.modal-close {
+  position: absolute; top: 15px; right: 15px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 20px; cursor: pointer; width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; transition: all 0.2s;
+}
+.modal-close:hover { background: var(--surface-2); color: var(--text); }
+.modal-content h2 { margin-bottom: 20px; font-size: 20px; padding-right: 20px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-actions .btn { flex: 1; }
+
+/* ==========================================================================
+   7. Сетки Героев
+   ========================================================================== */
+.heroes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; }
+.hero-card {
+  background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
+  padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.hero-card:hover { border-color: var(--text-muted); }
+.hero-card.selected { border-color: var(--primary); background: rgba(224, 62, 62, 0.1); box-shadow: 0 0 15px rgba(224, 62, 62, 0.2); }
+.hero-avatar {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--surface-2);
+  margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;
+  font-weight: bold; color: var(--text-muted); font-size: 20px; overflow: hidden;
+}
+.hero-card.selected .hero-avatar { background: var(--primary); color: white; }
+.hero-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ==========================================================================
+   8. Финальная таблица
+   ========================================================================== */
+.standing-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.standing-item.gold { border-color: #ffd700; background: rgba(255, 215, 0, 0.1); }
+.standing-item.silver { border-color: #c0c0c0; background: rgba(192, 192, 192, 0.1); }
+.standing-item.bronze { border-color: #cd7f32; background: rgba(205, 127, 50, 0.1); }
+
+.standing-place { font-size: 20px; font-weight: 900; width: 40px; color: var(--text-muted); }
+.standing-item.gold .standing-place { color: #ffd700; }
+.standing-item.silver .standing-place { color: #c0c0c0; }
+.standing-item.bronze .standing-place { color: #cd7f32; }
+
+.standing-name { flex: 1; font-weight: 600; font-size: 16px; }
+.standing-score { font-weight: bold; color: var(--primary); font-size: 18px; }
+
+/* ==========================================================================
+   9. Адаптив для админки на телефонах
+   ========================================================================== */
+@media (max-width: 900px) {
+  #tab-tournament { flex-direction: column; overflow-y: auto; }
+  .room-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; overflow-x: auto; padding: 10px; }
+  .room-card { min-width: 180px; }
+  #roomContent { padding: 15px; }
+  #roomContent > div:nth-child(3) { display: flex; flex-direction: column; }
+
+  #tab-heroes > div { flex-direction: column; }
+}
+
+/* ==========================================================================
+   10. ЯРКАЯ ИНДИКАЦИЯ АКТИВНЫХ КНОПОК (Счет и Первый игрок)
+   ========================================================================== */
+.score-btn.active, .goes-first-btn.active, .miss-btn.active {
+  background: var(--primary) !important;
+  border-color: #ff6b6b !important;
+  color: white !important;
+  font-weight: bold;
+  box-shadow: 0 0 15px rgba(224, 62, 62, 0.5);
+  transform: scale(1.02);
+}
+
+.score-btn:active, .goes-first-btn:active, .miss-btn:active {
+  transform: scale(0.98);
+}
