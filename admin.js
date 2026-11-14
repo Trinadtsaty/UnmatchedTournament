@@ -182,7 +182,6 @@ function renderRoomContent() {
 
   const roomPlayers = AppDB.players.filter(p => p.room_code === room.code);
 
-  // СОРТИРОВКА: Боты всегда в самом низу
   const sorted = [...roomPlayers].sort((a, b) => {
     if (a.is_bot && !b.is_bot) return 1;
     if (!a.is_bot && b.is_bot) return -1;
@@ -269,8 +268,6 @@ function renderRoomContent() {
                 ${currentMatches.map(m => {
                   let statusIcon = '';
                   if (m.admin_note) statusIcon += '<span title="' + m.admin_note + '" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">⚠️</span>';
-                  if (m.status === 'disputed') statusIcon += '<span title="Оспорено игроками!" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">🛑</span>';
-                  if (m.status === 'reported_by_p1' || m.status === 'reported_by_p2') statusIcon += '<span title="Ожидает подтверждения" style="color: var(--yellow); margin-left: 5px; font-size: 16px;">⏳</span>';
 
                   return `
                   <tr>
@@ -336,9 +333,11 @@ function startTournament() {
 
     newMatches.push({
       id: Date.now() + Math.floor(Math.random() * 1000), room_code: room.code, round: 1,
-      table: `Стол ${tableNum}`, p1: p1.name, p2: p2.name,
+      table: `Стол ${tableNum}`, // Физический стол
+      p1: p1.name, p2: p2.name,
       p1_score: null, p2_score: null, status: 'pending',
-      map_name: mapName, p1_goes_first: null,
+      map_name: mapName, // Карта из списка tables
+      p1_goes_first: null,
       hero_p1_g1: '', hero_p2_g1: '', hero_p1_g2: '', hero_p2_g2: '', admin_note: ''
     });
     tableNum++;
@@ -506,8 +505,6 @@ function handleNextRoundClick() {
           <span style="font-size:11px; color:var(--muted);">${m.map_name}</span>
         </div>
 
-        ${m.status === 'disputed' ? '<div style="color: var(--pink); font-weight: bold; font-size: 12px; margin-bottom: 5px; text-align: center;">⚠️ Спор! Требуется решение</div>' : ''}
-
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <span style="font-weight: 600; width: 30%; text-align: left;">${m.p1}</span>
           <span id="miss_score_display_${m.id}" style="font-family: 'Bebas Neue'; font-size:28px; color:var(--yellow); width: 40%; text-align: center; text-shadow: 2px 2px 0 var(--black);">- : -</span>
@@ -662,7 +659,10 @@ function generateNextRound(room, roomPlayers) {
     pairs.push([p1, p2]);
   }
 
-  // 1. Распределение ФИЗИЧЕСКИХ СТОЛОВ (из списка комнаты)
+  const roomTables = AppDB.tables.filter(t => t.room_code === room.code);
+  const numTables = roomTables.length;
+
+  // 1. Распределение ФИЗИЧЕСКИХ СТОЛОВ (всегда "Стол N")
   const tableHistory = {};
   AppDB.matches.filter(m => m.room_code === room.code).forEach(m => {
     if (!tableHistory[m.p1]) tableHistory[m.p1] = new Set();
@@ -671,8 +671,10 @@ function generateNextRound(room, roomPlayers) {
     tableHistory[m.p2].add(m.table);
   });
 
-  const roomTables = AppDB.tables.filter(t => t.room_code === room.code);
-  let availableTables = new Set(roomTables.map(t => t.name));
+  let availableTables = new Set();
+  for (let i = 1; i <= numTables; i++) {
+    availableTables.add(`Стол ${i}`);
+  }
 
   let assignedTables = {};
   let unassignedTablePairs = [];
@@ -702,7 +704,7 @@ function generateNextRound(room, roomPlayers) {
     assignedTables[index] = t;
   });
 
-  // 2. Распределение КАРТ (из списка комнаты)
+  // 2. Распределение КАРТ (из списка tables, только имена)
   const mapHistory = {};
   AppDB.matches.filter(m => m.room_code === room.code).forEach(m => {
     if (!mapHistory[m.p1]) mapHistory[m.p1] = new Set();
@@ -780,7 +782,6 @@ document.getElementById('confirmCreateBtn').addEventListener('click', () => {
   const code = Math.random().toString(36).substring(2, 6).toUpperCase();
   AppDB = DB.get();
 
-  // Создаем столы и сразу привязываем их к комнате
   const tableCount = maxPlayers / 2;
   for (let i = 1; i <= tableCount; i++) {
     AppDB.tables.push({ id: Date.now() + Math.floor(Math.random() * 10000) + i, room_code: code, name: `Стол ${i}` });
@@ -796,7 +797,7 @@ document.getElementById('confirmCreateBtn').addEventListener('click', () => {
 });
 
 // ==========================================================================
-// ФИНАЛЬНАЯ ТАБЛИЦА (ПОСТЕР) - РУССКАЯ ВЕРСИЯ
+// ФИНАЛЬНАЯ ТАБЛИЦА (ПОСТЕР)
 // ==========================================================================
 function renderStandings(players) {
   const container = document.getElementById('standingsCaptureArea');
