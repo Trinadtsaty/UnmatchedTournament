@@ -1,44 +1,82 @@
+// Инициализация клиента Supabase (используем глобальный объект window.supabase)
 const dbClient = window.supabase.createClient(
-  'https://cuvexievsoldyadbtckc.supabase.co',
+  'https://cuvexievsoldyadbtckc.supabase.co', 
   'sb_publishable_8QFv2y1yU7kBTF_bJThlpQ_aAbLqCx8'
 );
 
 const DB = {
   data: { rooms: [], players: [], matches: [], heroes: [], tables: [] },
-
+  
   async init() {
-    const { data: rooms } = await dbClient.from('rooms').select('*');
-    const { data: players } = await dbClient.from('players').select('*');
-    const { data: matches } = await dbClient.from('matches').select('*');
-    const { data: heroes } = await dbClient.from('heroes').select('*');
-    const { data: tables } = await dbClient.from('tables').select('*');
+    try {
+      const { data: rooms } = await dbClient.from('rooms').select('*');
+      const { data: players } = await dbClient.from('players').select('*');
+      const { data: matches } = await dbClient.from('matches').select('*');
+      const { data: heroes } = await dbClient.from('heroes').select('*');
+      const { data: tables } = await dbClient.from('tables').select('*');
+      
+      // Преобразуем комнаты из snake_case (БД) в camelCase (JS)
+      const formattedRooms = (rooms || []).map(r => ({
+        code: r.code,
+        maxPlayers: r.max_players,
+        heroesPerPlayer: r.heroes_per_player,
+        totalRounds: r.total_rounds,
+        round: r.round,
+        status: r.status
+      }));
 
-    this.data = {
-      rooms: rooms || [],
-      players: players || [],
-      matches: matches || [],
-      heroes: heroes || [],
-      tables: tables || []
-    };
+      // Преобразуем матчи из snake_case (БД) в camelCase (JS)
+      const formattedMatches = (matches || []).map(m => ({
+        id: Number(m.id),
+        room_code: m.room_code,
+        round: m.round,
+        table: m.table_name, // Возвращаем привычное имя
+        p1: m.p1,
+        p2: m.p2,
+        p1_score: m.p1_score,
+        p2_score: m.p2_score,
+        status: m.status,
+        map_name: m.map_name,
+        p1_goes_first: m.p1_goes_first,
+        hero_p1_g1: m.hero_p1_g1,
+        hero_p2_g1: m.hero_p2_g1,
+        hero_p1_g2: m.hero_p1_g2,
+        hero_p2_g2: m.hero_p2_g2,
+        admin_note: m.admin_note
+      }));
 
-    // Если база пустая, загружаем дефолтных героев
-    if (this.data.heroes.length === 0) {
-      this.data.heroes = [
-        { name: "Дракула", image: "" },
-        { name: "Шерлок Холмс", image: "" },
-        { name: "Медуза", image: "" },
-        { name: "Алиса", image: "" },
-        { name: "Синдбад", image: "" },
-        { name: "Король Артур", image: "" }
-      ];
-      await dbClient.from('heroes').upsert(this.data.heroes);
+      // Игроки и столы загружаются как есть, там поля совпадают
+      this.data = {
+        rooms: formattedRooms,
+        players: players || [],
+        matches: formattedMatches,
+        heroes: heroes || [],
+        tables: tables || []
+      };
+      
+      // Если пул героев пуст, создаем дефолтных
+      if (this.data.heroes.length === 0) {
+        this.data.heroes = [
+          { name: "Дракула", image: "" },
+          { name: "Шерлок Холмс", image: "" },
+          { name: "Медуза", image: "" },
+          { name: "Алиса", image: "" },
+          { name: "Синдбад", image: "" },
+          { name: "Король Артур", image: "" }
+        ];
+        await dbClient.from('heroes').upsert(this.data.heroes);
+      }
+
+      console.log("✅ Данные успешно загружены из Supabase");
+    } catch (err) {
+      console.error("Ошибка загрузки из БД:", err);
     }
   },
-
+  
   get() {
     return this.data;
   },
-
+  
   async set(newData) {
     this.data = newData;
     // Асинхронно синхронизируем в фоне
@@ -47,14 +85,44 @@ const DB = {
 
   async syncData(data) {
     try {
-      // 1. Удаляем то, что было удалено в интерфейсе
+      // 1. Преобразуем комнаты в snake_case для Supabase
+      const roomsToSync = data.rooms.map(r => ({
+        code: r.code,
+        max_players: r.maxPlayers,
+        heroes_per_player: r.heroesPerPlayer,
+        total_rounds: r.totalRounds,
+        round: r.round,
+        status: r.status
+      }));
+
+      // 2. Преобразуем матчи в snake_case для Supabase
+      const matchesToSync = data.matches.map(m => ({
+        id: m.id,
+        room_code: m.room_code,
+        round: m.round,
+        table_name: m.table, // В БД это поле называется table_name
+        p1: m.p1,
+        p2: m.p2,
+        p1_score: m.p1_score,
+        p2_score: m.p2_score,
+        status: m.status,
+        map_name: m.map_name,
+        p1_goes_first: m.p1_goes_first,
+        hero_p1_g1: m.hero_p1_g1,
+        hero_p2_g1: m.hero_p2_g1,
+        hero_p1_g2: m.hero_p1_g2,
+        hero_p2_g2: m.hero_p2_g2,
+        admin_note: m.admin_note
+      }));
+
+      // 3. Обработка удалений (чтобы не оставалось "мусора" в БД)
       const { data: dbRooms } = await dbClient.from('rooms').select('code');
       if (dbRooms) {
         const newCodes = data.rooms.map(r => r.code);
         const toDelete = dbRooms.filter(r => !newCodes.includes(r.code)).map(r => r.code);
         if (toDelete.length > 0) await dbClient.from('rooms').delete().in('code', toDelete);
       }
-
+      
       const { data: dbPlayers } = await dbClient.from('players').select('id');
       if (dbPlayers) {
         const newIds = data.players.map(p => p.id);
@@ -69,10 +137,10 @@ const DB = {
         if (toDelete.length > 0) await dbClient.from('matches').delete().in('id', toDelete);
       }
 
-      // 2. Обновляем или добавляем новые
-      if (data.rooms.length) await dbClient.from('rooms').upsert(data.rooms);
+      // 4. Запись / Обновление данных
+      if (roomsToSync.length) await dbClient.from('rooms').upsert(roomsToSync);
       if (data.players.length) await dbClient.from('players').upsert(data.players);
-      if (data.matches.length) await dbClient.from('matches').upsert(data.matches);
+      if (matchesToSync.length) await dbClient.from('matches').upsert(matchesToSync);
       if (data.tables.length) await dbClient.from('tables').upsert(data.tables);
       if (data.heroes.length) await dbClient.from('heroes').upsert(data.heroes);
 
