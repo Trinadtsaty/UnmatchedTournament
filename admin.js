@@ -6,7 +6,6 @@ let tempMatchResult = { p1: null, p2: null };
 let tempMissScores = {};
 let viewingRound = null;
 
-// Честный рандом (Фишер-Йетс)
 function shuffleArray(array) {
   let currentIndex = array.length, randomIndex;
   while (currentIndex !== 0) {
@@ -57,10 +56,20 @@ function renderSidebar() {
   const list = document.getElementById('roomList');
   const emptyMsg = document.getElementById('emptyRoomsMsg');
 
+  const headerInfo = document.getElementById('headerRoomInfo');
+  if (headerInfo) {
+    if (activeRoomCode && AppDB.rooms.find(r => r.code === activeRoomCode)) {
+      const room = AppDB.rooms.find(r => r.code === activeRoomCode);
+      headerInfo.innerHTML = `Комната: <span style="color: var(--pink); font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 1px;">${room.code}</span>`;
+    } else {
+      headerInfo.innerHTML = '';
+    }
+  }
+
   if (AppDB.rooms.length === 0) {
     list.innerHTML = '';
     emptyMsg.style.display = 'block';
-    document.getElementById('roomContent').innerHTML = '<p style="color: var(--text-muted);">Выберите комнату слева или создайте новую</p>';
+    document.getElementById('roomContent').innerHTML = '<p style="color: var(--muted); font-family: Bungee;">Выберите комнату слева или создайте новую</p>';
     return;
   }
 
@@ -161,11 +170,11 @@ function renderRoomContent() {
   if (isWaiting) {
     actionBtn = `<button id="startTournamentBtn" class="btn btn-primary" style="width: auto; padding: 10px 20px;">🚀 Начать турнир (Раунд 1)</button>`;
   } else if (isFinished && isCurrentRound) {
-    actionBtn = `<button id="showFinalBtn" class="btn btn-primary" style="width: auto; padding: 10px 20px; background: #ffd700; color: #000; border: none;">🏆 Показать итоги</button>`;
+    actionBtn = `<button id="showFinalBtn" class="btn" style="width: auto; padding: 10px 20px; background: var(--yellow); color: var(--black); border: 3px solid var(--black);">🏆 Показать итоги</button>`;
   } else if (isCurrentRound) {
     actionBtn = `<button id="nextRoundBtn" class="btn btn-primary" style="width: auto; padding: 10px 20px;">Следующий раунд →</button>`;
   } else {
-    actionBtn = `<button onclick="viewingRound = ${room.round}; renderRoomContent();" class="btn btn-primary" style="width: auto; padding: 10px 20px; background: var(--surface-2);">Вернуться в текущий раунд</button>`;
+    actionBtn = `<button onclick="viewingRound = ${room.round}; renderRoomContent();" class="btn" style="width: auto; padding: 10px 20px; background: var(--surface-light); color: var(--text);">Вернуться в текущий раунд</button>`;
   }
 
   let roundOptions = '';
@@ -176,25 +185,26 @@ function renderRoomContent() {
   document.getElementById('roomContent').innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <div>
-        <h2 style="margin: 0;">Комната ${room.code}</h2>
-        <span style="color: var(--text-muted); font-size: 13px;">Игроков: ${roomPlayers.length}/${room.maxPlayers} · Раунд ${room.round} из ${room.totalRounds}</span>
+        <h2 style="margin: 0; color: var(--cyan);">Турнирная сетка</h2>
+        <span style="color: var(--muted); font-size: 14px; font-weight: bold;">Раунд ${room.round} из ${room.totalRounds}</span>
       </div>
       ${actionBtn}
     </div>
 
-    ${!isCurrentRound ? '<div style="color: var(--warning); font-size: 13px; margin-bottom: 15px; text-align: center; background: rgba(234, 179, 8, 0.1); padding: 10px; border-radius: 8px;">Вы просматриваете историю. Счет менять нельзя, но можно указать героев и первого игрока.</div>' : ''}
+    ${!isCurrentRound ? '<div style="color: var(--black); font-family: Bungee; font-size: 12px; margin-bottom: 15px; text-align: center; background: var(--yellow); padding: 10px; border: 2px solid var(--black);">Вы просматриваете историю. Счет менять нельзя, но можно указать героев и первого игрока.</div>' : ''}
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
       <div class="admin-panel">
-        <h3 style="margin-bottom: 15px; font-size: 16px;">Игроки</h3>
-        ${sorted.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">Пока никто не присоединился</p>' : sorted.map(p => `
-          <div style="background:var(--surface-2); padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin-bottom: 15px; font-size: 18px;">Игроки</h3>
+        ${sorted.length === 0 ? '<p style="color: var(--muted); font-size: 13px;">Пока никто не присоединился</p>' : sorted.map(p => `
+          <div style="background:var(--surface-light); padding:10px; border: 2px solid var(--black); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <strong>${p.name} ${p.is_bot ? '<span style="color:var(--warning); font-size:10px;">[БОТ]</span>' : ''}</strong>
-              <div style="font-size:11px; color:var(--text-muted);">Бух: ${p.buchholz || 0} · С ботом: ${p.bot_games || 0}</div>
+              <strong style="font-family: 'Space Grotesk'; font-size: 16px;">${p.name}</strong>
+              ${p.is_bot ? '<span style="font-family: Bungee; font-size: 10px; color: var(--yellow); background: var(--black); padding: 2px 6px; border: 1px solid var(--yellow); margin-left: 8px;">БОТ</span>' : ''}
+              <div style="font-size:12px; color:var(--muted); margin-top: 4px;">Бух: ${p.buchholz || 0} · С ботом: ${p.bot_games || 0}</div>
             </div>
             <div style="text-align:right;">
-              <div style="color:var(--primary); font-size: 14px; font-weight:bold;">${p.score} очк.</div>
+              <div style="color:var(--cyan); font-size: 20px; font-family: 'Bungee';">${p.score}</div>
             </div>
           </div>
         `).join('')}
@@ -202,38 +212,48 @@ function renderRoomContent() {
 
       <div class="admin-panel">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 16px;">Матчи</h3>
-          <select id="roundSelector" style="padding: 5px 10px; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;">
+          <h3 style="margin: 0; font-size: 18px;">Матчи</h3>
+          <select id="roundSelector" style="width: auto; padding: 5px 10px; font-size: 14px;">
             ${roundOptions}
           </select>
         </div>
 
-        ${currentMatches.length === 0 ? '<p style="color: var(--text-muted); font-size: 13px;">Матчи не сгенерированы</p>' : `
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead><tr>
-              <th style="text-align: left; padding: 6px; color: var(--text-muted);">Стол / Карта</th>
-              <th style="text-align: left; padding: 6px; color: var(--text-muted);">Игрок 1</th>
-              <th style="text-align: left; padding: 6px; color: var(--text-muted);">Игрок 2</th>
-              <th style="text-align: left; padding: 6px; color: var(--text-muted);">Счёт</th>
-              <th style="text-align: left; padding: 6px; color: var(--text-muted);"></th>
-            </tr></thead>
-            <tbody>
-              ${currentMatches.map(m => `
-                <tr>
-                  <td style="padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top;">
-                    <strong>${m.table}</strong>
-                    <br><span style="font-size:10px; color:var(--text-muted);">${m.map_name}</span>
-                  </td>
-                  <td style="padding: 6px; border-bottom: 1px solid var(--border);">${m.p1}</td>
-                  <td style="padding: 6px; border-bottom: 1px solid var(--border);">${m.p2}</td>
-                  <td style="padding: 6px; border-bottom: 1px solid var(--border);">${m.p1_score !== null ? `${m.p1_score}:${m.p2_score}` : '—'}</td>
-                  <td style="padding: 6px; border-bottom: 1px solid var(--border);">
-                    <button onclick="openMatchEdit(${m.id})" class="btn" style="padding:4px 8px; font-size:11px;">✎</button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        ${currentMatches.length === 0 ? '<p style="color: var(--muted); font-size: 13px;">Матчи не сгенерированы</p>' : `
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead><tr>
+                <th style="text-align: left; padding: 8px; color: var(--cyan); border-bottom: 2px solid var(--black);">Стол / Карта</th>
+                <th style="text-align: left; padding: 8px; color: var(--cyan); border-bottom: 2px solid var(--black);">Игрок 1</th>
+                <th style="text-align: left; padding: 8px; color: var(--cyan); border-bottom: 2px solid var(--black);">Игрок 2</th>
+                <th style="text-align: left; padding: 8px; color: var(--cyan); border-bottom: 2px solid var(--black);">Счёт</th>
+                <th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--black);"></th>
+              </tr></thead>
+              <tbody>
+                ${currentMatches.map(m => {
+                  // Оставляем только иконку заметки
+                  let statusIcon = '';
+                  if (m.admin_note) statusIcon = '<span title="' + m.admin_note + '" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">⚠️</span>';
+
+                  return `
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--black); vertical-align: top;">
+                      <strong style="font-family: 'Bungee'; font-size: 12px; color: var(--text);">${m.table}</strong>
+                      <br><span style="font-size:10px; color:var(--muted);">${m.map_name}</span>
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--black); font-weight: 600;">${m.p1}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--black); font-weight: 600;">${m.p2}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--black); font-family: 'Bungee'; color: ${m.p1_score !== null ? 'var(--yellow)' : 'var(--muted)'};">
+                      ${m.p1_score !== null ? `${m.p1_score}:${m.p2_score}` : '—'} ${statusIcon}
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--black);">
+                      <button onclick="openMatchEdit(${m.id})" class="btn" style="padding:4px 8px; font-size:12px; width: auto; background: var(--surface-light); border: 2px solid var(--black); box-shadow: none;">✎</button>
+                    </td>
+                  </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
         `}
       </div>
     </div>
@@ -331,19 +351,15 @@ window.openMatchEdit = function(matchId) {
   const p1NameEl = document.getElementById('editP1Name');
   const p2NameEl = document.getElementById('editP2Name');
 
-  p1NameEl.style.color = 'var(--text)';
-  p1NameEl.style.textDecoration = 'none';
-  p2NameEl.style.color = 'var(--text)';
-  p2NameEl.style.textDecoration = 'none';
+  p1NameEl.classList.remove('first-player-highlight');
+  p2NameEl.classList.remove('first-player-highlight');
 
   if (match.p1_goes_first === 'p1') {
     document.getElementById('btnGoesFirstP1').classList.add('active');
-    p1NameEl.style.color = 'var(--primary)';
-    p1NameEl.style.textDecoration = 'underline';
+    p1NameEl.classList.add('first-player-highlight');
   } else if (match.p1_goes_first === 'p2') {
     document.getElementById('btnGoesFirstP2').classList.add('active');
-    p2NameEl.style.color = 'var(--primary)';
-    p2NameEl.style.textDecoration = 'underline';
+    p2NameEl.classList.add('first-player-highlight');
   }
 
   document.getElementById('editGoesFirst').value = match.p1_goes_first || '';
@@ -399,11 +415,11 @@ window.setGoesFirst = function(player, btnEl) {
   const p1NameEl = document.getElementById('editP1Name');
   const p2NameEl = document.getElementById('editP2Name');
 
-  p1NameEl.style.color = player === 'p1' ? 'var(--primary)' : 'var(--text)';
-  p1NameEl.style.textDecoration = player === 'p1' ? 'underline' : 'none';
+  p1NameEl.classList.remove('first-player-highlight');
+  p2NameEl.classList.remove('first-player-highlight');
 
-  p2NameEl.style.color = player === 'p2' ? 'var(--primary)' : 'var(--text)';
-  p2NameEl.style.textDecoration = player === 'p2' ? 'underline' : 'none';
+  if (player === 'p1') p1NameEl.classList.add('first-player-highlight');
+  if (player === 'p2') p2NameEl.classList.add('first-player-highlight');
 };
 
 document.getElementById('saveMatchBtn').addEventListener('click', () => {
@@ -433,7 +449,7 @@ document.getElementById('saveMatchBtn').addEventListener('click', () => {
   renderRoomContent();
 });
 
-// --- ПЕРЕХОД РАУНДА ---
+// --- ПЕРЕХОД РАУНДА (ИСПРАВЛЕННЫЙ БАННЕР) ---
 function handleNextRoundClick() {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
@@ -444,22 +460,22 @@ function handleNextRoundClick() {
     tempMissScores = {};
     const list = document.getElementById('missingScoresList');
     list.innerHTML = missing.map(m => `
-      <div style="background:#222; padding:12px; border-radius:8px; margin-bottom:10px;">
-        <div style="font-weight:bold; margin-bottom:8px; display:flex; justify-content:space-between;">
-          <span>${m.table}</span>
-          <span style="font-size:11px; color:var(--text-muted);">${m.map_name}</span>
+      <div style="background:var(--surface-light); border: 2px solid var(--black); padding:12px; margin-bottom:10px;">
+        <div style="font-family: 'Bungee'; margin-bottom:8px; display:flex; justify-content:space-between;">
+          <span style="color: var(--cyan);">${m.table}</span>
+          <span style="font-size:11px; color:var(--muted);">${m.map_name}</span>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span>${m.p1}</span>
-          <span id="miss_score_display_${m.id}" style="font-weight:bold; font-size:18px; color:var(--warning);">- : -</span>
-          <span>${m.p2}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-weight: 600; width: 30%; text-align: left;">${m.p1}</span>
+          <span id="miss_score_display_${m.id}" style="font-family: 'Bebas Neue'; font-size:28px; color:var(--yellow); width: 40%; text-align: center; text-shadow: 2px 2px 0 var(--black);">- : -</span>
+          <span style="font-weight: 600; width: 30%; text-align: right;">${m.p2}</span>
         </div>
 
         <div style="display:flex; gap:5px;">
-          <button class="btn btn-win miss-btn" style="padding:8px; flex:1;" onclick="setMissScore(${m.id}, 'p1', this)">${m.p1}</button>
-          <button class="btn btn-draw miss-btn" style="padding:8px; flex:1;" onclick="setMissScore(${m.id}, 'draw', this)">1:1</button>
-          <button class="btn btn-lose miss-btn" style="padding:8px; flex:1;" onclick="setMissScore(${m.id}, 'p2', this)">${m.p2}</button>
+          <button class="btn btn-win miss-btn" style="padding:8px; flex:1; font-size: 14px;" onclick="setMissScore(${m.id}, 'p1', this)">2:0</button>
+          <button class="btn btn-draw miss-btn" style="padding:8px; flex:1; font-size: 14px;" onclick="setMissScore(${m.id}, 'draw', this)">1:1</button>
+          <button class="btn btn-lose miss-btn" style="padding:8px; flex:1; font-size: 14px;" onclick="setMissScore(${m.id}, 'p2', this)">0:2</button>
         </div>
       </div>
     `).join('');
@@ -515,6 +531,7 @@ document.getElementById('fillMissingBtn').addEventListener('click', () => {
   showConfirmRoundModal();
 });
 
+// --- ПРОВЕРКА РЕЗУЛЬТАТОВ (ИСПРАВЛЕННЫЙ БАННЕР) ---
 function showConfirmRoundModal() {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
@@ -522,9 +539,14 @@ function showConfirmRoundModal() {
 
   const list = document.getElementById('confirmRoundList');
   list.innerHTML = currentMatches.map(m => `
-    <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;">
-      <span>${m.table} (${m.map_name})</span>
-      <span>${m.p1} <b>${m.p1_score}</b> : <b>${m.p2_score}</b> ${m.p2}</span>
+    <div style="display:flex; align-items:center; padding:12px; border-bottom:2px solid var(--black); background: var(--surface-light); margin-bottom: 5px;">
+      <span style="font-family: 'Bungee'; font-size: 12px; color: var(--cyan); width: 70px;">${m.table}</span>
+
+      <div style="display: flex; align-items: center; flex: 1; justify-content: center; gap: 15px;">
+        <span style="font-weight: 600; width: 90px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m.p1}</span>
+        <span style="font-family: 'Bebas Neue'; font-size: 24px; color: var(--yellow); background: var(--black); padding: 2px 10px; border: 1px solid var(--black); box-shadow: 2px 2px 0px var(--cyan);">${m.p1_score} : ${m.p2_score}</span>
+        <span style="font-weight: 600; width: 90px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m.p2}</span>
+      </div>
     </div>
   `).join('');
 
@@ -692,7 +714,7 @@ function showFinalStandings() {
       <div class="standing-item ${placeClass}">
         <div class="standing-place">${i + 1}</div>
         <div class="standing-name">${p.name} ${p.is_bot ? '[БОТ]' : ''}</div>
-        <div class="standing-score">${p.score} очк.</div>
+        <div class="standing-score">${p.score}</div>
       </div>
     `;
   }).join('');
@@ -708,7 +730,7 @@ document.getElementById('downloadPngBtn').addEventListener('click', () => {
   btn.disabled = true;
 
   html2canvas(captureArea, {
-    backgroundColor: '#1a1a20',
+    backgroundColor: '#260D20',
     scale: 2
   }).then(canvas => {
     const link = document.createElement('a');

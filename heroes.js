@@ -8,8 +8,8 @@ function getDirectImageUrl(url) {
   return url;
 }
 
-// Генерация SVG-заглушки для битых картинок
-const DEFAULT_HERO_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2324242d"/><text x="50" y="50" font-family="Arial" font-size="40" fill="%238b8b99" text-anchor="middle" dominant-baseline="central">?</text></svg>';
+// Заглушка для битых картинок
+const DEFAULT_HERO_IMG = 'img/plug.jpg';
 
 let currentHeroPlayer = null;
 
@@ -103,7 +103,7 @@ window.renderAdminHeroes = function() {
   AppDB = DB.get();
 
   if (!activeRoomCode) {
-    document.getElementById('heroPoolList').innerHTML = '<p style="color:var(--text-muted)">Сначала выберите комнату во вкладке "Турнир"</p>';
+    document.getElementById('heroPoolList').innerHTML = '<p style="color:var(--muted)">Сначала выберите комнату во вкладке "Турнир"</p>';
     document.getElementById('heroAssignList').innerHTML = '';
     document.getElementById('heroAssignPlayerSelect').innerHTML = '<option value="">Выберите игрока</option>';
     return;
@@ -115,7 +115,7 @@ window.renderAdminHeroes = function() {
   if (currentHeroPlayer) {
     renderHeroAssignments();
   } else {
-    document.getElementById('heroAssignList').innerHTML = '<p style="color:var(--text-muted); font-size:12px;">Выберите игрока из списка выше</p>';
+    document.getElementById('heroAssignList').innerHTML = '<p style="color:var(--muted); font-size:12px;">Выберите игрока из списка выше</p>';
   }
 };
 
@@ -123,20 +123,20 @@ window.renderAdminHeroes = function() {
 function renderHeroPool() {
   const container = document.getElementById('heroPoolList');
   if (!AppDB.heroes || AppDB.heroes.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); font-size:12px;">Пул пуст. Загрузите JSON или добавьте вручную.</p>';
+    container.innerHTML = '<p style="color:var(--muted); font-size:12px;">Пул пуст. Загрузите JSON или добавьте вручную.</p>';
     return;
   }
 
   container.innerHTML = AppDB.heroes.map((h, index) => `
-    <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center; position:relative;">
-      <div style="position:absolute; top:2px; right:2px; display:flex; gap:2px; background: rgba(0,0,0,0.6); border-radius:4px;">
-        <button onclick="editHero(${index})" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-size:14px; padding:2px 5px;" title="Редактировать">✎</button>
-        <button onclick="deleteHero(${index})" style="background:none; border:none; color:#ff6b6b; cursor:pointer; font-size:14px; padding:2px 5px;" title="Удалить">✕</button>
+    <div style="background:var(--surface-light); border: 3px solid var(--black); border-radius: 0; padding:10px; text-align:center; position:relative; box-shadow: 3px 3px 0px var(--black);">
+      <div style="position:absolute; top:2px; right:2px; display:flex; gap:2px; background: rgba(0,0,0,0.6); border-radius:4px; border: 1px solid var(--black);">
+        <button onclick="editHero(${index})" style="background:none; border:none; color:var(--cyan); cursor:pointer; font-size:14px; padding:2px 5px;" title="Редактировать">✎</button>
+        <button onclick="deleteHero(${index})" style="background:none; border:none; color:var(--pink); cursor:pointer; font-size:14px; padding:2px 5px;" title="Удалить">✕</button>
       </div>
-      <div style="width:100%; height:60px; border-radius:4px; overflow:hidden; background:#000; margin-bottom:8px; margin-top: 10px;">
-        <img src="${h.image || DEFAULT_HERO_IMG}" onerror="this.src='${DEFAULT_HERO_IMG}'" style="width:100%; height:100%; object-fit:cover;">
+      <div style="width:100%; aspect-ratio: 1 / 1; border-radius: 0; overflow:hidden; background:var(--black); margin-bottom:8px; border: 2px solid var(--black);">
+        <img src="${h.image || DEFAULT_HERO_IMG}" onerror="this.src='${DEFAULT_HERO_IMG}'; this.onerror=null;" style="width:100%; height:100%; object-fit:cover;">
       </div>
-      <div style="font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${h.name}</div>
+      <div style="font-family: 'Space Grotesk'; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text);">${h.name}</div>
     </div>
   `).join('');
 }
@@ -226,12 +226,12 @@ function renderHeroAssignments() {
 
   if (!player.assigned_heroes) player.assigned_heroes = [];
 
-  const limitInfo = `<div style="grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
-    Назначено: <b style="color: ${player.assigned_heroes.length >= room.heroesPerPlayer ? 'var(--danger)' : 'var(--success)'}">${player.assigned_heroes.length}</b> из ${room.heroesPerPlayer}
+  const limitInfo = `<div style="grid-column: 1 / -1; font-family: 'Space Grotesk'; font-weight: 600; font-size: 12px; color: var(--text); margin-bottom: 5px;">
+    Назначено: <b style="color: ${player.assigned_heroes.length >= room.heroesPerPlayer ? 'var(--pink)' : 'var(--cyan)'}">${player.assigned_heroes.length}</b> из ${room.heroesPerPlayer}
   </div>`;
 
   if (!AppDB.heroes || AppDB.heroes.length === 0) {
-    container.innerHTML = limitInfo + '<p style="color:var(--text-muted); font-size:12px;">В пуле нет героев.</p>';
+    container.innerHTML = limitInfo + '<p style="color:var(--muted); font-size:12px;">В пуле нет героев.</p>';
     return;
   }
 
@@ -241,8 +241,8 @@ function renderHeroAssignments() {
       <div class="hero-card ${isAssigned ? 'selected' : ''}"
            style="padding: 10px 5px; cursor: pointer;"
            onclick="toggleHeroAssignment('${h.name}')">
-        <div class="hero-avatar" style="width:40px; height:40px; overflow:hidden;">
-           <img src="${h.image || DEFAULT_HERO_IMG}" onerror="this.src='${DEFAULT_HERO_IMG}'" style="width:100%; height:100%; object-fit:cover;">
+        <div class="hero-avatar" style="width:100%; aspect-ratio: 1 / 1; overflow:hidden; border-radius: 0; border: 2px solid var(--black);">
+           <img src="${h.image || DEFAULT_HERO_IMG}" onerror="this.src='${DEFAULT_HERO_IMG}'; this.onerror=null;" style="width:100%; height:100%; object-fit:cover;">
         </div>
         <div class="hero-name" style="font-size:11px; margin-top:5px;">${h.name}</div>
       </div>

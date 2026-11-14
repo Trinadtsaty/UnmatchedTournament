@@ -12,7 +12,11 @@
   <!-- ЭКРАН ВХОДА -->
   <div id="loginScreen" class="screen active">
     <div class="login-box">
-      <h1>UNMATCHED</h1>
+      <!-- Добавлен Холмс и Логотип -->
+      <img src="img/holmes.jpg" alt="Sherlock" class="login-avatar">
+
+      <img src="img/logo.png" alt="UNMATCHED" style="width: 100%; max-width: 280px; margin: 0 auto 10px auto; display: block; filter: drop-shadow(2px 2px 0px var(--black));">
+
       <p class="subtitle">Турнирный модуль</p>
 
       <div class="input-group">
@@ -32,8 +36,7 @@
   <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
   <div id="appScreen" class="screen">
     <nav class="sidebar">
-      <div class="brand">U</div>
-
+      <!-- Убрана буква U (brand) -->
       <button class="nav-btn active" data-tab="leaders">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         <span>Лидеры</span>
@@ -49,7 +52,6 @@
         <span>Герои</span>
       </button>
 
-      <!-- НОВАЯ ВКЛАДКА ИНФО -->
       <button class="nav-btn" data-tab="info">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>Инфо</span>

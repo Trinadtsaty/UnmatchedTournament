@@ -114,14 +114,17 @@ function renderLeaderboard() {
 
   const tbody = document.getElementById('leaderboardBody');
   if (players.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Пусто</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted);">Пусто</td></tr>';
     return;
   }
 
   tbody.innerHTML = players.map((p, i) => `
     <tr class="${p.name === currentUser ? 'me' : ''}">
       <td>${i + 1}</td>
-      <td>${p.name} ${p.is_bot ? '<span style="font-size:10px; color:var(--warning);">[БОТ]</span>' : ''}</td>
+      <td>
+        ${p.name}
+        ${p.is_bot ? '<span style="font-family: Bungee; font-size: 10px; color: var(--yellow); background: var(--black); padding: 2px 6px; border: 1px solid var(--yellow); margin-left: 8px;">БОТ</span>' : ''}
+      </td>
       <td><strong>${p.score}</strong></td>
       <td>${p.buchholz || 0}</td>
     </tr>
@@ -142,49 +145,38 @@ function renderMatch() {
   );
 
   if (!myMatch) {
-    container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">В этом раунде у вас нет матча. Ожидайте следующего.</p>`;
+    container.innerHTML = `<p style="color: var(--muted); text-align: center; padding: 20px;">В этом раунде у вас нет матча. Ожидайте следующего.</p>`;
     return;
   }
 
   const isP1 = myMatch.p1 === currentUser;
   const opponent = isP1 ? myMatch.p2 : myMatch.p1;
 
-  const p1First = myMatch.p1_goes_first === 'p1';
-  const p2First = myMatch.p1_goes_first === 'p2';
-
-  const myNameStyle = (isP1 && p1First) || (!isP1 && p2First)
-    ? 'color: var(--primary); text-decoration: underline;'
-    : '';
-  const oppNameStyle = (isP1 && p2First) || (!isP1 && p1First)
-    ? 'color: var(--primary); text-decoration: underline;'
-    : '';
-
   container.innerHTML = `
     <div class="match-table-num" style="display: flex; justify-content: center; gap: 10px;">
-      <span>Стол: <b>${myMatch.table}</b></span>
+      <span>Стол: <b style="color: var(--cyan);">${myMatch.table}</b></span>
       <span>|</span>
-      <span>Карта: <b>${myMatch.map_name}</b></span>
+      <span>Карта: <b style="color: var(--cyan);">${myMatch.map_name}</b></span>
     </div>
+
     <div class="vs-block">
       <div class="player-block">
-        <div class="player-name" style="${myNameStyle}">${currentUser}</div>
-        ${(isP1 && p1First) || (!isP1 && p2First) ? '<div style="font-size:11px; color:var(--text-muted); margin-top:5px;">Ходит первым</div>' : ''}
+        <div class="player-name">${currentUser}</div>
       </div>
       <div class="vs-text">VS</div>
       <div class="player-block">
-        <div class="player-name" style="${oppNameStyle}">${opponent}</div>
-        ${(isP1 && p2First) || (!isP1 && p1First) ? '<div style="font-size:11px; color:var(--text-muted); margin-top:5px;">Ходит первым</div>' : ''}
+        <div class="player-name">${opponent}</div>
       </div>
     </div>
 
     ${myMatch.p1_score !== null ? `
-      <div style="text-align: center; padding: 20px;">
-        <div style="font-size: 32px; font-weight: bold; color: var(--warning); margin-bottom: 10px;">${myMatch.p1_score} : ${myMatch.p2_score}</div>
-        <div style="color: var(--text-muted);">${myMatch.status === 'reported' ? 'Ожидайте подтверждения от админа' : 'Матч завершен'}</div>
+      <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
+        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px; text-shadow: 2px 2px 0px var(--black);">${myMatch.p1_score} : ${myMatch.p2_score}</div>
+        <div style="color: var(--muted); font-size: 14px;">${myMatch.status === 'reported' ? 'Ожидайте подтверждения от админа' : 'Матч завершен'}</div>
       </div>
     ` : `
       <div class="actions-block">
-        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 10px;">Введите результат встречи</p>
+        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px;">Введите результат встречи:</p>
         <button class="btn btn-win" onclick="reportResult(${myMatch.id}, 'p1_win')">Победа (2:0)</button>
         <button class="btn btn-draw" onclick="reportResult(${myMatch.id}, 'draw')">Ничья (1:1)</button>
         <button class="btn btn-lose" onclick="reportResult(${myMatch.id}, 'p2_win')">Поражение (0:2)</button>
@@ -197,8 +189,6 @@ window.reportResult = function(matchId, type) {
   AppDB = DB.get();
   const match = AppDB.matches.find(m => m.id === matchId);
   if (!match) return;
-
-  const isP1 = match.p1 === currentUser;
 
   if (type === 'p1_win') { match.p1_score = 2; match.p2_score = 0; }
   if (type === 'draw') { match.p1_score = 1; match.p2_score = 1; }
@@ -218,18 +208,20 @@ function renderHeroes() {
   const myHeroes = me?.assigned_heroes || [];
 
   if (myHeroes.length === 0) {
-    grid.innerHTML = '<p style="color:var(--text-muted)">Админ еще не назначил вам героев.</p>';
+    grid.innerHTML = '<p style="color:var(--muted)">Админ еще не назначил вам героев.</p>';
     return;
   }
 
-  const DEFAULT_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%2324242d"/><text x="50" y="50" font-family="Arial" font-size="40" fill="%238b8b99" text-anchor="middle" dominant-baseline="central">?</text></svg>';
+  // ИСПОЛЬЗУЕМ НОВУЮ ЗАГЛУШКУ
+  const DEFAULT_IMG = 'img/plug.jpg';
 
   grid.innerHTML = myHeroes.map(heroName => {
     const hero = AppDB.heroes.find(h => h.name === heroName) || { name: heroName, image: '' };
     return `
-      <div class="hero-card selected">
-        <div class="hero-avatar" style="overflow: hidden;">
-          ${hero.image ? `<img src="${hero.image}" onerror="this.src='${DEFAULT_IMG}'" style="width:100%; height:100%; object-fit:cover;">` : `<img src="${DEFAULT_IMG}" style="width:100%; height:100%; object-fit:cover;">`}
+      <div class="hero-card selected" style="pointer-events: none;">
+        <!-- КВАДРАТНЫЙ КОНТЕЙНЕР С OBJECT-FIT -->
+        <div class="hero-avatar" style="width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 0; border: 3px solid var(--black);">
+          <img src="${hero.image || DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'; this.onerror=null;" style="width:100%; height:100%; object-fit:cover;">
         </div>
         <div class="hero-name">${heroName}</div>
       </div>
