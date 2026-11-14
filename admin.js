@@ -16,6 +16,46 @@ function shuffleArray(array) {
   return array;
 }
 
+// УМНЫЙ ПЕРЕБОР ДЛЯ РАСПРЕДЕЛЕНИЯ (БЭКТРЕКИНГ)
+function findOptimalAssignment(pairs, itemsPool, history) {
+  let assigned = new Array(pairs.length).fill(null);
+  let used = new Set();
+
+  function backtrack(index) {
+    if (index === pairs.length) return true;
+    const [p1, p2] = pairs[index];
+    const h1 = history[p1.name] || new Set();
+    const h2 = history[p2.name] || new Set();
+
+    for (let item of itemsPool) {
+      if (!used.has(item) && !h1.has(item) && !h2.has(item)) {
+        used.add(item);
+        assigned[index] = item;
+        if (backtrack(index + 1)) return true;
+        used.delete(item);
+        assigned[index] = null;
+      }
+    }
+    return false;
+  }
+
+  if (backtrack(0)) return assigned;
+
+  // Если идеально распределить не удалось (форс-мажор), распределяем как получится
+  assigned = new Array(pairs.length).fill(null);
+  used = new Set();
+  for (let i = 0; i < pairs.length; i++) {
+    for (let item of itemsPool) {
+      if (!used.has(item)) {
+        used.add(item);
+        assigned[i] = item;
+        break;
+      }
+    }
+  }
+  return assigned;
+}
+
 async function initAdmin() {
   await DB.init();
   AppDB = DB.get();
@@ -190,7 +230,14 @@ function renderRoomContent() {
     return (a.bot_games || 0) - (b.bot_games || 0);
   });
 
-  const currentMatches = AppDB.matches.filter(m => m.room_code === room.code && m.round === viewingRound);
+  // СОРТИРОВКА МАТЧЕЙ ПО НОМЕРУ СТОЛА
+  const currentMatches = AppDB.matches
+    .filter(m => m.room_code === room.code && m.round === viewingRound)
+    .sort((a, b) => {
+      const numA = parseInt(a.table.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.table.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
 
   const isWaiting = room.round === 0 || room.status === 'waiting';
   const isLastRound = room.round === room.totalRounds;
@@ -333,10 +380,10 @@ function startTournament() {
 
     newMatches.push({
       id: Date.now() + Math.floor(Math.random() * 1000), room_code: room.code, round: 1,
-      table: `Стол ${tableNum}`, // Физический стол
+      table: `Стол ${tableNum}`,
       p1: p1.name, p2: p2.name,
       p1_score: null, p2_score: null, status: 'pending',
-      map_name: mapName, // Карта из списка tables
+      map_name: mapName,
       p1_goes_first: null,
       hero_p1_g1: '', hero_p2_g1: '', hero_p1_g2: '', hero_p2_g2: '', admin_note: ''
     });
@@ -662,7 +709,7 @@ function generateNextRound(room, roomPlayers) {
   const roomTables = AppDB.tables.filter(t => t.room_code === room.code);
   const numTables = roomTables.length;
 
-  // 1. Распределение ФИЗИЧЕСКИХ СТОЛОВ (всегда "Стол N")
+  // Умное распределение столов (бэктрекинг)
   const tableHistory = {};
   AppDB.matches.filter(m => m.room_code === room.code).forEach(m => {
     if (!tableHistory[m.p1]) tableHistory[m.p1] = new Set();
@@ -671,40 +718,12 @@ function generateNextRound(room, roomPlayers) {
     tableHistory[m.p2].add(m.table);
   });
 
-  let availableTables = new Set();
-  for (let i = 1; i <= numTables; i++) {
-    availableTables.add(`Стол ${i}`);
-  }
+  const physicalTablesPool = [];
+  for (let i = 1; i <= numTables; i++) physicalTablesPool.push(`Стол ${i}`);
 
-  let assignedTables = {};
-  let unassignedTablePairs = [];
+  const assignedTables = findOptimalAssignment(pairs, physicalTablesPool, tableHistory);
 
-  pairs.forEach((pair, index) => {
-    const [p1, p2] = pair;
-    const h1 = tableHistory[p1.name] || new Set();
-    const h2 = tableHistory[p2.name] || new Set();
-
-    let foundTable = null;
-    for (let t of availableTables) {
-      if (!h1.has(t) && !h2.has(t)) { foundTable = t; break; }
-    }
-
-    if (foundTable) {
-      assignedTables[index] = foundTable;
-      availableTables.delete(foundTable);
-    } else {
-      unassignedTablePairs.push(index);
-    }
-  });
-
-  unassignedTablePairs.forEach(index => {
-    let t = Array.from(availableTables)[0];
-    if (!t) t = `Стол ${index + 1}`;
-    else availableTables.delete(t);
-    assignedTables[index] = t;
-  });
-
-  // 2. Распределение КАРТ (из списка tables, только имена)
+  // Умное распределение карт (бэктрекинг)
   const mapHistory = {};
   AppDB.matches.filter(m => m.room_code === room.code).forEach(m => {
     if (!mapHistory[m.p1]) mapHistory[m.p1] = new Set();
@@ -713,36 +732,10 @@ function generateNextRound(room, roomPlayers) {
     mapHistory[m.p2].add(m.map_name);
   });
 
-  let availableMaps = new Set(roomTables.map(t => t.name));
-  let assignedMaps = {};
-  let unassignedMapPairs = [];
+  const mapsPool = roomTables.map(t => t.name);
+  const assignedMaps = findOptimalAssignment(pairs, mapsPool, mapHistory);
 
-  pairs.forEach((pair, index) => {
-    const [p1, p2] = pair;
-    const h1 = mapHistory[p1.name] || new Set();
-    const h2 = mapHistory[p2.name] || new Set();
-
-    let foundMap = null;
-    for (let map of availableMaps) {
-      if (!h1.has(map) && !h2.has(map)) { foundMap = map; break; }
-    }
-
-    if (foundMap) {
-      assignedMaps[index] = foundMap;
-      availableMaps.delete(foundMap);
-    } else {
-      unassignedMapPairs.push(index);
-    }
-  });
-
-  unassignedMapPairs.forEach(index => {
-    let map = Array.from(availableMaps)[0];
-    if (!map) map = 'Резервная карта';
-    else availableMaps.delete(map);
-    assignedMaps[index] = map;
-  });
-
-  // 3. Создание матчей
+  // Создание матчей
   let newMatches = [];
   pairs.forEach((pair, index) => {
     const [p1, p2] = pair;
