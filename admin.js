@@ -25,7 +25,7 @@ async function initAdmin() {
 
   // --- ТАЙМЕР АВТООБНОВЛЕНИЯ (КАЖДЫЕ 10 СЕК) ---
   setInterval(async () => {
-    // Если открыта модалка, не обновляем, чтобы не стереть ввод
+    // Если открыто модальное окно, не обновляем данные (чтобы не сбить ввод)
     if (document.querySelector('.modal.active')) return;
 
     try {
@@ -118,7 +118,7 @@ function renderSidebar() {
     card.addEventListener('click', (e) => {
       if (e.target.classList.contains('delete-x') || e.target.classList.contains('copy-code')) return;
       activeRoomCode = card.dataset.code;
-      viewingRound = null;
+      viewingRound = null; // Сбрасываем при смене комнаты
       renderSidebar();
     });
   });
@@ -189,7 +189,8 @@ function renderRoomContent() {
   const currentMatches = AppDB.matches.filter(m => m.room_code === room.code && m.round === viewingRound);
 
   const isWaiting = room.round === 0 || room.status === 'waiting';
-  const isFinished = room.round >= room.totalRounds;
+  const isLastRound = room.round === room.totalRounds;
+  const isFinished = room.round > room.totalRounds; // Турнир завершен только после подтверждения последнего раунда
   const isCurrentRound = viewingRound === room.round;
 
   let actionBtn = '';
@@ -198,7 +199,9 @@ function renderRoomContent() {
   } else if (isFinished && isCurrentRound) {
     actionBtn = `<button id="showFinalBtn" class="btn" style="width: auto; padding: 10px 20px; background: var(--yellow); color: var(--black); border: 3px solid var(--black);">🏆 Показать итоги</button>`;
   } else if (isCurrentRound) {
-    actionBtn = `<button id="nextRoundBtn" class="btn btn-primary" style="width: auto; padding: 10px 20px;">Следующий раунд →</button>`;
+    const btnText = isLastRound ? '🏆 Завершить турнир' : 'Следующий раунд →';
+    const btnBg = isLastRound ? 'var(--yellow)' : 'var(--cyan)';
+    actionBtn = `<button id="nextRoundBtn" class="btn" style="width: auto; padding: 10px 20px; background: ${btnBg}; color: var(--black); border: 3px solid var(--black);">${btnText}</button>`;
   } else {
     actionBtn = `<button onclick="viewingRound = ${room.round}; renderRoomContent();" class="btn" style="width: auto; padding: 10px 20px; background: var(--surface-light); color: var(--text);">Вернуться в текущий раунд</button>`;
   }
@@ -455,7 +458,6 @@ document.getElementById('saveMatchBtn').addEventListener('click', () => {
   if (match.round === room.round) {
     match.p1_score = tempMatchResult.p1;
     match.p2_score = tempMatchResult.p2;
-    // Админ принудительно ставит статус confirmed, так как он всё проверил
     if (match.p1_score !== null && match.p2_score !== null) match.status = 'confirmed';
   }
 
@@ -480,7 +482,6 @@ function handleNextRoundClick() {
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
   const currentMatches = AppDB.matches.filter(m => m.room_code === room.code && m.round === room.round);
 
-  // Ищем всё, что не подтверждено
   const missing = currentMatches.filter(m => m.status !== 'confirmed');
 
   if (missing.length > 0) {
@@ -546,7 +547,7 @@ document.getElementById('fillMissingBtn').addEventListener('click', () => {
       if (tempMissScores[m.id]) {
         m.p1_score = tempMissScores[m.id].p1;
         m.p2_score = tempMissScores[m.id].p2;
-        m.status = 'confirmed'; // Админ подтвердил вручную
+        m.status = 'confirmed';
       } else {
         allFilled = false;
       }
@@ -585,8 +586,6 @@ document.getElementById('confirmRoundBtn').addEventListener('click', () => {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
   const currentMatches = AppDB.matches.filter(m => m.room_code === room.code && m.round === room.round);
-
-  // Все матчи уже должны быть confirmed, но на всякий случай еще раз
   currentMatches.forEach(m => {
     if (m.p1_score !== null && m.p2_score !== null) m.status = 'confirmed';
   });
@@ -618,7 +617,16 @@ document.getElementById('confirmRoundBtn').addEventListener('click', () => {
     p.score += (p.admin_score || 0);
   });
 
-  generateNextRound(room, roomPlayers);
+  if (room.round === room.totalRounds) {
+    // Если это был последний раунд, просто увеличиваем счетчик и сохраняем
+    room.round += 1;
+    DB.set(AppDB);
+    viewingRound = room.round;
+    renderSidebar();
+  } else {
+    generateNextRound(room, roomPlayers);
+  }
+
   document.getElementById('confirmRoundModal').classList.remove('active');
   viewingRound = room.round;
   renderSidebar();

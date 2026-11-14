@@ -102,13 +102,11 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
 // --- ТАЙМЕР АВТООБНОВЛЕНИЯ (КАЖДЫЕ 10 СЕКУНД) ---
 setInterval(async () => {
   const session = JSON.parse(localStorage.getItem('um_session'));
-  if (!session) return; // Если не залогинен, не обновляем
+  if (!session) return;
 
   try {
     await DB.init();
     AppDB = DB.get();
-
-    // Перерисовываем активные элементы
     renderLeaderboard();
     renderMatch();
     renderHeroes();
@@ -136,9 +134,9 @@ function renderLeaderboard() {
   const tbody = document.getElementById('leaderboardBody');
   const finalBtnContainer = document.getElementById('playerFinalBtnContainer');
 
-  // Показываем кнопку итогов, если турнир завершен
+  // ИСПРАВЛЕНО: Показываем кнопку только если турнир полностью завершен (room.round > totalRounds)
   if (finalBtnContainer) {
-    if (room.round >= room.totalRounds) {
+    if (room.round > room.totalRounds) {
       finalBtnContainer.innerHTML = `<button onclick="showPlayerFinalStandings()" class="btn btn-primary" style="background: var(--yellow); color: var(--black); font-family: 'Bungee'; width: auto; display: block; margin: 0 auto 20px auto; padding: 10px 20px;">🏆 Посмотреть итоги турнира</button>`;
     } else {
       finalBtnContainer.innerHTML = '';
@@ -196,7 +194,6 @@ function renderMatch() {
       </div>
     `;
   } else if (myMatch.status === 'reported_by_p1' && !isP1) {
-    // Соперник (P1) заявил результат, а мы (P2) видим подтверждение
     statusHtml = `
       <div class="actions-block" style="background: var(--surface-light); padding: 15px; border: 2px solid var(--black);">
         <p style="text-align: center; color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 15px;">
@@ -210,7 +207,6 @@ function renderMatch() {
       </div>
     `;
   } else if (myMatch.status === 'reported_by_p2' && isP1) {
-    // Соперник (P2) заявил результат, а мы (P1) видим подтверждение
     statusHtml = `
       <div class="actions-block" style="background: var(--surface-light); padding: 15px; border: 2px solid var(--black);">
         <p style="text-align: center; color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 15px;">
@@ -232,7 +228,6 @@ function renderMatch() {
       </div>
     `;
   } else if (myMatch.status === 'reported' || myMatch.status === 'confirmed') {
-    // Оба согласились или админ подтвердил
     statusHtml = `
       <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
         <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px; text-shadow: 2px 2px 0px var(--black);">${myMatch.p1_score} : ${myMatch.p2_score}</div>
@@ -240,7 +235,6 @@ function renderMatch() {
       </div>
     `;
   } else if (myMatch.status === 'reported_by_p1' || myMatch.status === 'reported_by_p2') {
-    // Мы сами заявили результат, ждем соперника
     statusHtml = `
       <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
         <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px;">${myMatch.p1_score} : ${myMatch.p2_score}</div>
@@ -281,7 +275,6 @@ window.reportResult = function(matchId, type) {
   if (type === 'draw') { match.p1_score = 1; match.p2_score = 1; }
   if (type === 'p2_win') { match.p1_score = 0; match.p2_score = 2; }
 
-  // Ставим статус в зависимости от того, кто нажал
   match.status = isP1 ? 'reported_by_p1' : 'reported_by_p2';
 
   DB.set(AppDB);
@@ -294,7 +287,7 @@ window.confirmResult = function(matchId) {
   const match = AppDB.matches.find(m => m.id === matchId);
   if (!match) return;
 
-  match.status = 'reported'; // Оба согласны
+  match.status = 'reported';
   DB.set(AppDB);
   renderMatch();
   alert('Вы подтвердили результат. Ожидайте проверки админа.');
@@ -305,7 +298,7 @@ window.disputeResult = function(matchId) {
   const match = AppDB.matches.find(m => m.id === matchId);
   if (!match) return;
 
-  match.status = 'disputed'; // Спор
+  match.status = 'disputed';
   DB.set(AppDB);
   renderMatch();
   alert('Вы оспорили результат. Админ будет уведомлен.');

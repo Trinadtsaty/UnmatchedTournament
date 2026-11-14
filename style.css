@@ -15,17 +15,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ЖЕСТКАЯ ФИКСАЦИЯ ЭКРАНА (С ПОДДЕРЖКОЙ МОБИЛЬНЫХ БРАУЗЕРОВ) */
+/* ЖЕСТКАЯ ФИКСАЦИЯ ЭКРАНА */
 html, body {
-  height: 100dvh; /* Dynamic viewport height для мобилок */
+  height: 100%;
   overflow: hidden;
-}
-
-/* Фоллбэк для старых браузеров */
-@supports not (height: 100dvh) {
-  html, body {
-    height: 100vh;
-  }
 }
 
 body {
@@ -172,15 +165,27 @@ body {
 }
 
 @media (max-width: 768px) {
+  /* Убираем fixed, используем flex */
+  #appScreen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
   .sidebar {
     display: flex; flex-direction: row; justify-content: space-around;
     background: var(--surface); border-top: 4px solid var(--black);
-    padding: 8px 0; padding-bottom: env(safe-area-inset-bottom); order: 2; z-index: 100;
-    flex-shrink: 0;
-    /* Важно: фиксируем высоту нижней панели */
-    height: auto;
+    padding: 8px 0; padding-bottom: env(safe-area-inset-bottom);
+    flex-shrink: 0; /* Не сжимается */
+    order: 2;
   }
-  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; order: 1; }
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    order: 1;
+    min-height: 0; /* Критически важно для скролла внутри flex */
+  }
   .nav-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center;
     gap: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: bold;
