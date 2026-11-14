@@ -165,8 +165,8 @@ body {
 }
 
 @media (max-width: 768px) {
-  /* Убираем fixed, используем flex */
-  #appScreen {
+  /* ИСПРАВЛЕНИЕ: Нижняя панель применяется ТОЛЬКО когда экран активен */
+  #appScreen.active {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -175,7 +175,7 @@ body {
     display: flex; flex-direction: row; justify-content: space-around;
     background: var(--surface); border-top: 4px solid var(--black);
     padding: 8px 0; padding-bottom: env(safe-area-inset-bottom);
-    flex-shrink: 0; /* Не сжимается */
+    flex-shrink: 0;
     order: 2;
   }
   .content {
@@ -184,7 +184,7 @@ body {
     flex-direction: column;
     overflow: hidden;
     order: 1;
-    min-height: 0; /* Критически важно для скролла внутри flex */
+    min-height: 0;
   }
   .nav-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center;

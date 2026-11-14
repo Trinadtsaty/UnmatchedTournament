@@ -124,9 +124,14 @@ const DB = {
         if (playersError) console.error('Ошибка сохранения игроков:', playersError);
       }
 
-      // 4. Столы
+      // 4. Столы (ТЕПЕРЬ С room_code!)
       if (data.tables.length) {
-        const { error: tablesError } = await dbClient.from('tables').upsert(data.tables);
+        const tablesToSync = data.tables.map(t => ({
+          id: t.id,
+          room_code: t.room_code, // <--- Важное изменение
+          name: t.name
+        }));
+        const { error: tablesError } = await dbClient.from('tables').upsert(tablesToSync);
         if (tablesError) console.error('Ошибка сохранения столов:', tablesError);
       }
 
@@ -156,6 +161,13 @@ const DB = {
         const newIds = data.matches.map(m => m.id);
         const toDelete = dbMatches.filter(m => !newIds.includes(m.id)).map(m => m.id);
         if (toDelete.length > 0) await dbClient.from('matches').delete().in('id', toDelete);
+      }
+
+      const { data: dbTables } = await dbClient.from('tables').select('id');
+      if (dbTables) {
+        const newIds = data.tables.map(t => t.id);
+        const toDelete = dbTables.filter(t => !newIds.includes(t.id)).map(t => t.id);
+        if (toDelete.length > 0) await dbClient.from('tables').delete().in('id', toDelete);
       }
 
     } catch(e) {

@@ -23,9 +23,7 @@ async function initAdmin() {
 
   renderSidebar();
 
-  // --- ТАЙМЕР АВТООБНОВЛЕНИЯ (КАЖДЫЕ 10 СЕК) ---
   setInterval(async () => {
-    // Если открыто модальное окно, не обновляем данные (чтобы не сбить ввод)
     if (document.querySelector('.modal.active')) return;
 
     try {
@@ -86,7 +84,8 @@ function renderSidebar() {
   if (headerInfo) {
     if (activeRoomCode && AppDB.rooms.find(r => r.code === activeRoomCode)) {
       const room = AppDB.rooms.find(r => r.code === activeRoomCode);
-      headerInfo.innerHTML = `Комната: <span style="color: var(--pink); font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 1px;">${room.code}</span>`;
+      const roundText = room.round > room.totalRounds ? 'Завершен' : `Раунд ${room.round}`;
+      headerInfo.innerHTML = `Комната: <span style="color: var(--pink); font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 1px;">${room.code}</span> <span style="font-size: 12px; color: var(--muted);">(${roundText})</span>`;
     } else {
       headerInfo.innerHTML = '';
     }
@@ -103,11 +102,12 @@ function renderSidebar() {
 
   list.innerHTML = AppDB.rooms.map(r => {
     const count = AppDB.players.filter(p => p.room_code === r.code).length;
+    const roundText = r.round > r.totalRounds ? 'Итоги' : `Раунд ${r.round}`;
     return `
       <div class="room-card ${r.code === activeRoomCode ? 'active' : ''}" data-code="${r.code}">
         <div class="room-card-info">
           <strong class="copy-code" data-code="${r.code}" title="Нажмите, чтобы скопировать">${r.code}</strong>
-          <span>Раунд ${r.round} · ${count}/${r.maxPlayers} чел.</span>
+          <span>${roundText} · ${count}/${r.maxPlayers} чел.</span>
         </div>
         <button class="delete-x" data-code="${r.code}" title="Удалить">×</button>
       </div>
@@ -118,7 +118,7 @@ function renderSidebar() {
     card.addEventListener('click', (e) => {
       if (e.target.classList.contains('delete-x') || e.target.classList.contains('copy-code')) return;
       activeRoomCode = card.dataset.code;
-      viewingRound = null; // Сбрасываем при смене комнаты
+      viewingRound = null;
       renderSidebar();
     });
   });
@@ -163,6 +163,7 @@ document.getElementById('confirmDeleteRoomBtn').addEventListener('click', () => 
   AppDB.rooms = AppDB.rooms.filter(r => r.code !== roomToDelete);
   AppDB.players = AppDB.players.filter(p => p.room_code !== roomToDelete);
   AppDB.matches = AppDB.matches.filter(m => m.room_code !== roomToDelete);
+  AppDB.tables = AppDB.tables.filter(t => t.room_code !== roomToDelete);
   DB.set(AppDB);
 
   if (activeRoomCode === roomToDelete) activeRoomCode = AppDB.rooms[0]?.code || null;
@@ -180,7 +181,11 @@ function renderRoomContent() {
   if (viewingRound === null) viewingRound = room.round;
 
   const roomPlayers = AppDB.players.filter(p => p.room_code === room.code);
+
+  // СОРТИРОВКА: Боты всегда в самом низу
   const sorted = [...roomPlayers].sort((a, b) => {
+    if (a.is_bot && !b.is_bot) return 1;
+    if (!a.is_bot && b.is_bot) return -1;
     if (b.score !== a.score) return b.score - a.score;
     if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
     return (a.bot_games || 0) - (b.bot_games || 0);
@@ -190,15 +195,15 @@ function renderRoomContent() {
 
   const isWaiting = room.round === 0 || room.status === 'waiting';
   const isLastRound = room.round === room.totalRounds;
-  const isFinished = room.round > room.totalRounds; // Турнир завершен только после подтверждения последнего раунда
-  const isCurrentRound = viewingRound === room.round;
+  const isFinished = room.round > room.totalRounds;
+  const isCurrentRound = viewingRound === room.round || (isFinished && viewingRound === room.totalRounds);
 
   let actionBtn = '';
   if (isWaiting) {
     actionBtn = `<button id="startTournamentBtn" class="btn btn-primary" style="width: auto; padding: 10px 20px;">🚀 Начать турнир (Раунд 1)</button>`;
   } else if (isFinished && isCurrentRound) {
     actionBtn = `<button id="showFinalBtn" class="btn" style="width: auto; padding: 10px 20px; background: var(--yellow); color: var(--black); border: 3px solid var(--black);">🏆 Показать итоги</button>`;
-  } else if (isCurrentRound) {
+  } else if (isCurrentRound && !isFinished) {
     const btnText = isLastRound ? '🏆 Завершить турнир' : 'Следующий раунд →';
     const btnBg = isLastRound ? 'var(--yellow)' : 'var(--cyan)';
     actionBtn = `<button id="nextRoundBtn" class="btn" style="width: auto; padding: 10px 20px; background: ${btnBg}; color: var(--black); border: 3px solid var(--black);">${btnText}</button>`;
@@ -207,15 +212,17 @@ function renderRoomContent() {
   }
 
   let roundOptions = '';
-  for (let i = 1; i <= room.round; i++) {
+  for (let i = 1; i <= Math.min(room.round, room.totalRounds); i++) {
     roundOptions += `<option value="${i}" ${i === viewingRound ? 'selected' : ''}>Раунд ${i}</option>`;
   }
+
+  const headerRoundText = isFinished ? 'Турнир завершен' : `Раунд ${room.round} из ${room.totalRounds}`;
 
   document.getElementById('roomContent').innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <div>
         <h2 style="margin: 0; color: var(--cyan);">Турнирная сетка</h2>
-        <span style="color: var(--muted); font-size: 14px; font-weight: bold;">Раунд ${room.round} из ${room.totalRounds}</span>
+        <span style="color: var(--muted); font-size: 14px; font-weight: bold;">${headerRoundText}</span>
       </div>
       ${actionBtn}
     </div>
@@ -242,9 +249,10 @@ function renderRoomContent() {
       <div class="admin-panel">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <h3 style="margin: 0; font-size: 18px;">Матчи</h3>
+          ${isFinished ? `<span style="font-family: 'Bungee'; color: var(--yellow); font-size: 14px;">ЗАВЕРШЕНЫ</span>` : `
           <select id="roundSelector" style="width: auto; padding: 5px 10px; font-size: 14px;">
             ${roundOptions}
-          </select>
+          </select>`}
         </div>
 
         ${currentMatches.length === 0 ? '<p style="color: var(--muted); font-size: 13px;">Матчи не сгенерированы</p>' : `
@@ -268,7 +276,7 @@ function renderRoomContent() {
                   <tr>
                     <td style="padding: 8px; border-bottom: 1px solid var(--black); vertical-align: top;">
                       <strong style="font-family: 'Bungee'; font-size: 12px; color: var(--text);">${m.table}</strong>
-                      <br><span style="font-size:10px; color:var(--muted);">${m.map_name}</span>
+                      <br><span style="font-size:10px; color:var(--muted);">Карта: ${m.map_name}</span>
                     </td>
                     <td style="padding: 8px; border-bottom: 1px solid var(--black); font-weight: 600;">${m.p1}</td>
                     <td style="padding: 8px; border-bottom: 1px solid var(--black); font-weight: 600;">${m.p2}</td>
@@ -289,10 +297,12 @@ function renderRoomContent() {
     </div>
   `;
 
-  document.getElementById('roundSelector').addEventListener('change', (e) => {
-    viewingRound = parseInt(e.target.value);
-    renderRoomContent();
-  });
+  if (!isFinished) {
+    document.getElementById('roundSelector').addEventListener('change', (e) => {
+      viewingRound = parseInt(e.target.value);
+      renderRoomContent();
+    });
+  }
 
   if (isWaiting) document.getElementById('startTournamentBtn').addEventListener('click', startTournament);
   if (isCurrentRound && !isWaiting && !isFinished) document.getElementById('nextRoundBtn').addEventListener('click', handleNextRoundClick);
@@ -315,12 +325,14 @@ function startTournament() {
   let newMatches = [];
   let tableNum = 1;
 
+  const roomTables = AppDB.tables.filter(t => t.room_code === room.code);
+
   while (shuffled.length > 0) {
     const p1 = shuffled.pop();
     const p2 = shuffled.pop();
-    const mapName = (AppDB.tables && AppDB.tables.length > 0)
-      ? AppDB.tables[(tableNum - 1) % AppDB.tables.length].name
-      : `Стол ${tableNum}`;
+    const mapName = roomTables.length > 0
+      ? roomTables[(tableNum - 1) % roomTables.length].name
+      : `Карта ${tableNum}`;
 
     newMatches.push({
       id: Date.now() + Math.floor(Math.random() * 1000), room_code: room.code, round: 1,
@@ -618,7 +630,6 @@ document.getElementById('confirmRoundBtn').addEventListener('click', () => {
   });
 
   if (room.round === room.totalRounds) {
-    // Если это был последний раунд, просто увеличиваем счетчик и сохраняем
     room.round += 1;
     DB.set(AppDB);
     viewingRound = room.round;
@@ -635,6 +646,8 @@ document.getElementById('confirmRoundBtn').addEventListener('click', () => {
 // --- ГЕНЕРАЦИЯ РАУНДА ---
 function generateNextRound(room, roomPlayers) {
   let players = [...roomPlayers].sort((a, b) => {
+    if (a.is_bot && !b.is_bot) return 1;
+    if (!a.is_bot && b.is_bot) return -1;
     if (b.score !== a.score) return b.score - a.score;
     if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
     return (a.bot_games || 0) - (b.bot_games || 0);
@@ -649,6 +662,47 @@ function generateNextRound(room, roomPlayers) {
     pairs.push([p1, p2]);
   }
 
+  // 1. Распределение ФИЗИЧЕСКИХ СТОЛОВ (из списка комнаты)
+  const tableHistory = {};
+  AppDB.matches.filter(m => m.room_code === room.code).forEach(m => {
+    if (!tableHistory[m.p1]) tableHistory[m.p1] = new Set();
+    if (!tableHistory[m.p2]) tableHistory[m.p2] = new Set();
+    tableHistory[m.p1].add(m.table);
+    tableHistory[m.p2].add(m.table);
+  });
+
+  const roomTables = AppDB.tables.filter(t => t.room_code === room.code);
+  let availableTables = new Set(roomTables.map(t => t.name));
+
+  let assignedTables = {};
+  let unassignedTablePairs = [];
+
+  pairs.forEach((pair, index) => {
+    const [p1, p2] = pair;
+    const h1 = tableHistory[p1.name] || new Set();
+    const h2 = tableHistory[p2.name] || new Set();
+
+    let foundTable = null;
+    for (let t of availableTables) {
+      if (!h1.has(t) && !h2.has(t)) { foundTable = t; break; }
+    }
+
+    if (foundTable) {
+      assignedTables[index] = foundTable;
+      availableTables.delete(foundTable);
+    } else {
+      unassignedTablePairs.push(index);
+    }
+  });
+
+  unassignedTablePairs.forEach(index => {
+    let t = Array.from(availableTables)[0];
+    if (!t) t = `Стол ${index + 1}`;
+    else availableTables.delete(t);
+    assignedTables[index] = t;
+  });
+
+  // 2. Распределение КАРТ (из списка комнаты)
   const mapHistory = {};
   AppDB.matches.filter(m => m.room_code === room.code).forEach(m => {
     if (!mapHistory[m.p1]) mapHistory[m.p1] = new Set();
@@ -657,15 +711,9 @@ function generateNextRound(room, roomPlayers) {
     mapHistory[m.p2].add(m.map_name);
   });
 
-  let availableMaps = new Set();
-  if (AppDB.tables && AppDB.tables.length > 0) {
-    AppDB.tables.forEach(t => availableMaps.add(t.name));
-  } else {
-    for (let i=1; i<=Math.ceil(roomPlayers.length/2); i++) availableMaps.add(`Стол ${i}`);
-  }
-
+  let availableMaps = new Set(roomTables.map(t => t.name));
   let assignedMaps = {};
-  let unassignedPairs = [];
+  let unassignedMapPairs = [];
 
   pairs.forEach((pair, index) => {
     const [p1, p2] = pair;
@@ -681,25 +729,28 @@ function generateNextRound(room, roomPlayers) {
       assignedMaps[index] = foundMap;
       availableMaps.delete(foundMap);
     } else {
-      unassignedPairs.push(index);
+      unassignedMapPairs.push(index);
     }
   });
 
-  unassignedPairs.forEach(index => {
+  unassignedMapPairs.forEach(index => {
     let map = Array.from(availableMaps)[0];
-    if (!map) map = 'Резервный стол';
+    if (!map) map = 'Резервная карта';
     else availableMaps.delete(map);
     assignedMaps[index] = map;
   });
 
+  // 3. Создание матчей
   let newMatches = [];
   pairs.forEach((pair, index) => {
     const [p1, p2] = pair;
     newMatches.push({
       id: Date.now() + Math.floor(Math.random() * 1000), room_code: room.code, round: room.round + 1,
-      table: `Стол ${index + 1}`, p1: p1.name, p2: p2.name,
+      table: assignedTables[index],
+      p1: p1.name, p2: p2.name,
       p1_score: null, p2_score: null, status: 'pending',
-      map_name: assignedMaps[index], p1_goes_first: null,
+      map_name: assignedMaps[index],
+      p1_goes_first: null,
       hero_p1_g1: '', hero_p2_g1: '', hero_p1_g2: '', hero_p2_g2: '', admin_note: ''
     });
   });
@@ -729,10 +780,10 @@ document.getElementById('confirmCreateBtn').addEventListener('click', () => {
   const code = Math.random().toString(36).substring(2, 6).toUpperCase();
   AppDB = DB.get();
 
+  // Создаем столы и сразу привязываем их к комнате
   const tableCount = maxPlayers / 2;
-  AppDB.tables = [];
   for (let i = 1; i <= tableCount; i++) {
-    AppDB.tables.push({ id: Date.now() + i, name: `Стол ${i}` });
+    AppDB.tables.push({ id: Date.now() + Math.floor(Math.random() * 10000) + i, room_code: code, name: `Стол ${i}` });
   }
 
   AppDB.rooms.push({ code, maxPlayers, heroesPerPlayer, totalRounds, round: 0, status: 'waiting' });
@@ -841,6 +892,8 @@ function showFinalStandings() {
   const roomPlayers = AppDB.players.filter(p => p.room_code === room.code);
 
   const sorted = [...roomPlayers].sort((a, b) => {
+    if (a.is_bot && !b.is_bot) return 1;
+    if (!a.is_bot && b.is_bot) return -1;
     if (b.score !== a.score) return b.score - a.score;
     if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
     return (a.bot_games || 0) - (b.bot_games || 0);

@@ -75,7 +75,7 @@ function showApp() {
   document.getElementById('appScreen').classList.add('active');
 
   document.getElementById('uiRoomCode').textContent = room.code;
-  document.getElementById('uiRound').textContent = room.round;
+  document.getElementById('uiRound').textContent = room.round > room.totalRounds ? 'Завершен' : room.round;
 
   renderLeaderboard();
   renderMatch();
@@ -126,6 +126,10 @@ function renderLeaderboard() {
   const players = AppDB.players
     .filter(p => p.room_code === session.room)
     .sort((a, b) => {
+      // Боты всегда внизу
+      if (a.is_bot && !b.is_bot) return 1;
+      if (!a.is_bot && b.is_bot) return -1;
+
       if (b.score !== a.score) return b.score - a.score;
       if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
       return (a.bot_games || 0) - (b.bot_games || 0);
@@ -134,7 +138,6 @@ function renderLeaderboard() {
   const tbody = document.getElementById('leaderboardBody');
   const finalBtnContainer = document.getElementById('playerFinalBtnContainer');
 
-  // ИСПРАВЛЕНО: Показываем кнопку только если турнир полностью завершен (room.round > totalRounds)
   if (finalBtnContainer) {
     if (room.round > room.totalRounds) {
       finalBtnContainer.innerHTML = `<button onclick="showPlayerFinalStandings()" class="btn btn-primary" style="background: var(--yellow); color: var(--black); font-family: 'Bungee'; width: auto; display: block; margin: 0 auto 20px auto; padding: 10px 20px;">🏆 Посмотреть итоги турнира</button>`;
@@ -182,63 +185,26 @@ function renderMatch() {
   const isP1 = myMatch.p1 === currentUser;
   const opponent = isP1 ? myMatch.p2 : myMatch.p1;
 
+  // ЗЕРКАЛЬНОСТЬ: наши очки и очки соперника
+  const myScore = isP1 ? myMatch.p1_score : myMatch.p2_score;
+  const oppScore = isP1 ? myMatch.p2_score : myMatch.p1_score;
+
   let statusHtml = '';
 
-  if (myMatch.status === 'pending') {
+  if (myScore === null) {
     statusHtml = `
       <div class="actions-block">
         <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px;">Введите результат встречи:</p>
-        <button class="btn btn-win" onclick="reportResult(${myMatch.id}, 'p1_win')">Победа (2:0)</button>
+        <button class="btn btn-win" onclick="reportResult(${myMatch.id}, 'win')">Победа (2:0)</button>
         <button class="btn btn-draw" onclick="reportResult(${myMatch.id}, 'draw')">Ничья (1:1)</button>
-        <button class="btn btn-lose" onclick="reportResult(${myMatch.id}, 'p2_win')">Поражение (0:2)</button>
+        <button class="btn btn-lose" onclick="reportResult(${myMatch.id}, 'lose')">Поражение (0:2)</button>
       </div>
     `;
-  } else if (myMatch.status === 'reported_by_p1' && !isP1) {
-    statusHtml = `
-      <div class="actions-block" style="background: var(--surface-light); padding: 15px; border: 2px solid var(--black);">
-        <p style="text-align: center; color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 15px;">
-          Соперник заявил результат: <span style="color: var(--yellow); font-size: 20px;">${myMatch.p1_score} : ${myMatch.p2_score}</span>
-        </p>
-        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 15px;">Вы согласны?</p>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn btn-win" onclick="confirmResult(${myMatch.id})">Да, подтвердить</button>
-          <button class="btn btn-lose" onclick="disputeResult(${myMatch.id})">Нет, оспорить</button>
-        </div>
-      </div>
-    `;
-  } else if (myMatch.status === 'reported_by_p2' && isP1) {
-    statusHtml = `
-      <div class="actions-block" style="background: var(--surface-light); padding: 15px; border: 2px solid var(--black);">
-        <p style="text-align: center; color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 15px;">
-          Соперник заявил результат: <span style="color: var(--yellow); font-size: 20px;">${myMatch.p1_score} : ${myMatch.p2_score}</span>
-        </p>
-        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 15px;">Вы согласны?</p>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn btn-win" onclick="confirmResult(${myMatch.id})">Да, подтвердить</button>
-          <button class="btn btn-lose" onclick="disputeResult(${myMatch.id})">Нет, оспорить</button>
-        </div>
-      </div>
-    `;
-  } else if (myMatch.status === 'disputed') {
-    statusHtml = `
-      <div style="text-align: center; padding: 20px; background: rgba(255, 38, 139, 0.1); border: 2px solid var(--pink);">
-        <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
-        <div style="color: var(--pink); font-weight: bold; font-size: 16px;">Спор!</div>
-        <div style="color: var(--muted); font-size: 14px; margin-top: 5px;">Ожидайте решения админа.</div>
-      </div>
-    `;
-  } else if (myMatch.status === 'reported' || myMatch.status === 'confirmed') {
+  } else {
     statusHtml = `
       <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
-        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px; text-shadow: 2px 2px 0px var(--black);">${myMatch.p1_score} : ${myMatch.p2_score}</div>
-        <div style="color: var(--cyan); font-size: 14px;">Результат подтвержден</div>
-      </div>
-    `;
-  } else if (myMatch.status === 'reported_by_p1' || myMatch.status === 'reported_by_p2') {
-    statusHtml = `
-      <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
-        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px;">${myMatch.p1_score} : ${myMatch.p2_score}</div>
-        <div style="color: var(--muted); font-size: 14px;">Ожидайте подтверждения от соперника...</div>
+        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px; text-shadow: 2px 2px 0px var(--black);">${myScore} : ${oppScore}</div>
+        <div style="color: var(--cyan); font-size: 14px;">Результат внесен</div>
       </div>
     `;
   }
@@ -252,11 +218,11 @@ function renderMatch() {
 
     <div class="vs-block">
       <div class="player-block">
-        <div class="player-name">${myMatch.p1}</div>
+        <div class="player-name">${currentUser}</div>
       </div>
       <div class="vs-text">VS</div>
       <div class="player-block">
-        <div class="player-name">${myMatch.p2}</div>
+        <div class="player-name">${opponent}</div>
       </div>
     </div>
 
@@ -264,44 +230,31 @@ function renderMatch() {
   `;
 }
 
+// УПРОЩЕННАЯ ЛОГИКА: Игрок нажал кнопку - матч сразу подтвержден
 window.reportResult = function(matchId, type) {
   AppDB = DB.get();
   const match = AppDB.matches.find(m => m.id === matchId);
   if (!match) return;
 
   const isP1 = match.p1 === currentUser;
+  let myScore, oppScore;
 
-  if (type === 'p1_win') { match.p1_score = 2; match.p2_score = 0; }
-  if (type === 'draw') { match.p1_score = 1; match.p2_score = 1; }
-  if (type === 'p2_win') { match.p1_score = 0; match.p2_score = 2; }
+  if (type === 'win') { myScore = 2; oppScore = 0; }
+  if (type === 'draw') { myScore = 1; oppScore = 1; }
+  if (type === 'lose') { myScore = 0; oppScore = 2; }
 
-  match.status = isP1 ? 'reported_by_p1' : 'reported_by_p2';
+  if (isP1) {
+    match.p1_score = myScore;
+    match.p2_score = oppScore;
+  } else {
+    match.p2_score = myScore;
+    match.p1_score = oppScore;
+  }
 
+  match.status = 'confirmed';
   DB.set(AppDB);
   renderMatch();
-  alert('Результат отправлен! Ожидайте подтверждения соперника.');
-};
-
-window.confirmResult = function(matchId) {
-  AppDB = DB.get();
-  const match = AppDB.matches.find(m => m.id === matchId);
-  if (!match) return;
-
-  match.status = 'reported';
-  DB.set(AppDB);
-  renderMatch();
-  alert('Вы подтвердили результат. Ожидайте проверки админа.');
-};
-
-window.disputeResult = function(matchId) {
-  AppDB = DB.get();
-  const match = AppDB.matches.find(m => m.id === matchId);
-  if (!match) return;
-
-  match.status = 'disputed';
-  DB.set(AppDB);
-  renderMatch();
-  alert('Вы оспорили результат. Админ будет уведомлен.');
+  alert('Результат сохранен!');
 };
 
 function renderHeroes() {
@@ -339,6 +292,8 @@ window.showPlayerFinalStandings = function() {
   const roomPlayers = AppDB.players.filter(p => p.room_code === room.code);
 
   const sorted = [...roomPlayers].sort((a, b) => {
+    if (a.is_bot && !b.is_bot) return 1;
+    if (!a.is_bot && b.is_bot) return -1;
     if (b.score !== a.score) return b.score - a.score;
     if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
     return (a.bot_games || 0) - (b.bot_games || 0);
