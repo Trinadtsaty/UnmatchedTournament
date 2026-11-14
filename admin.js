@@ -702,7 +702,7 @@ document.getElementById('confirmCreateBtn').addEventListener('click', () => {
 });
 
 // ==========================================================================
-// ФИНАЛЬНАЯ ТАБЛИЦА (ПОСТЕР)
+// ФИНАЛЬНАЯ ТАБЛИЦА (ПОСТЕР) - РУССКАЯ ВЕРСИЯ
 // ==========================================================================
 function renderStandings(players) {
   const container = document.getElementById('standingsCaptureArea');
@@ -715,7 +715,7 @@ function renderStandings(players) {
   if (!Array.isArray(players) || players.length === 0) {
     container.innerHTML = `
       <div class="standings-empty">
-        NO RESULTS AVAILABLE
+        НЕТ РЕЗУЛЬТАТОВ
       </div>
     `;
     return;
@@ -790,23 +790,23 @@ function renderStandings(players) {
   container.innerHTML = `
     <header class="standings-header">
       <img src="img/logo.png" alt="UNMATCHED" class="standings-logo">
-      <div class="standings-kicker">TOURNAMENT RESULTS</div>
-      <h1 class="standings-title">FINAL STANDINGS</h1>
-      <div class="standings-subtitle">THE BATTLE IS OVER</div>
+      <div class="standings-kicker">РЕЗУЛЬТАТЫ ТУРНИРА</div>
+      <h1 class="standings-title">ИТОГОВАЯ ТАБЛИЦА</h1>
+      <div class="standings-subtitle">БИТВА ОКОНЧЕНА</div>
     </header>
 
     ${podium.length ? `<section class="standings-podium">${podiumHTML}</section>` : ''}
 
     ${restHTML ? `
       <section class="standings-rest">
-        <div class="standings-section-title">FINAL RANKING</div>
+        <div class="standings-section-title">ФИНАЛЬНЫЙ РЕЙТИНГ</div>
         <div class="standings-list">${restHTML}</div>
       </section>
     ` : ''}
 
     <footer class="standings-footer">
       <div class="standings-footer-brand">UNMATCHED</div>
-      <div class="standings-footer-info">NO MERCY. NO REMATCH.</div>
+      <div class="standings-footer-info">БЕЗ ПОЩАДЫ. БЕЗ РЕВАНШЕЙ.</div>
     </footer>
   `;
 }

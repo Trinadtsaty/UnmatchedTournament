@@ -369,7 +369,7 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
 .hero-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 
 /* ==========================================================================
-   UNMATCHED — FINAL STANDINGS POSTER (Neon Punk Brutalism)
+   UNMATCHED — FINAL STANDINGS POSTER
    ========================================================================== */
 #standingsCaptureArea {
   --gold: #F5E13B;
@@ -716,6 +716,13 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
   #tab-heroes > div { flex-direction: column; }
 }
 
+/* ==========================================================================
+   МОБИЛЬНЫЙ ЛОГОТИП ПОД ШАПКОЙ
+   ========================================================================== */
+.mobile-logo-container {
+  display: none; /* По умолчанию скрыт на ПК */
+}
+
 @media (max-width: 768px) {
   .mobile-logo-container {
     display: flex;
@@ -761,8 +768,6 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
 }
 
 @media (max-width: 500px) {
-  .topbar-logo { display: none; }
-  .header-logo { height: 22px; }
   .login-logo { max-width: 240px; }
 }
 
@@ -782,11 +787,4 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
   color: var(--cyan) !important;
   text-shadow: 0 0 10px var(--cyan), 2px 2px 0px var(--black) !important;
   font-weight: 900;
-}
-
-/* ==========================================================================
-   МОБИЛЬНЫЙ ЛОГОТИП ПОД ШАПКОЙ (Скрыт на ПК)
-   ========================================================================== */
-.mobile-logo-container {
-  display: none;
 }

@@ -104,6 +104,8 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
 function renderLeaderboard() {
   AppDB = DB.get();
   const session = JSON.parse(localStorage.getItem('um_session'));
+  const room = AppDB.rooms.find(r => r.code === session.room);
+
   const players = AppDB.players
     .filter(p => p.room_code === session.room)
     .sort((a, b) => {
@@ -113,6 +115,17 @@ function renderLeaderboard() {
     });
 
   const tbody = document.getElementById('leaderboardBody');
+  const finalBtnContainer = document.getElementById('playerFinalBtnContainer');
+
+  // Показываем кнопку итогов, если турнир завершен
+  if (finalBtnContainer) {
+    if (room.round >= room.totalRounds) {
+      finalBtnContainer.innerHTML = `<button onclick="showPlayerFinalStandings()" class="btn btn-primary" style="background: var(--yellow); color: var(--black); font-family: 'Bungee'; width: auto; display: block; margin: 0 auto 20px auto; padding: 10px 20px;">🏆 Посмотреть итоги турнира</button>`;
+    } else {
+      finalBtnContainer.innerHTML = '';
+    }
+  }
+
   if (players.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted);">Пусто</td></tr>';
     return;
@@ -212,14 +225,12 @@ function renderHeroes() {
     return;
   }
 
-  // ИСПОЛЬЗУЕМ НОВУЮ ЗАГЛУШКУ
   const DEFAULT_IMG = 'img/plug.jpg';
 
   grid.innerHTML = myHeroes.map(heroName => {
     const hero = AppDB.heroes.find(h => h.name === heroName) || { name: heroName, image: '' };
     return `
       <div class="hero-card selected" style="pointer-events: none;">
-        <!-- КВАДРАТНЫЙ КОНТЕЙНЕР С OBJECT-FIT -->
         <div class="hero-avatar" style="width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 0; border: 3px solid var(--black);">
           <img src="${hero.image || DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'; this.onerror=null;" style="width:100%; height:100%; object-fit:cover;">
         </div>
@@ -227,6 +238,130 @@ function renderHeroes() {
       </div>
     `;
   }).join('');
+}
+
+// --- ОТОБРАЖЕНИЕ ФИНАЛЬНОЙ ТАБЛИЦЫ ДЛЯ ИГРОКОВ ---
+window.showPlayerFinalStandings = function() {
+  AppDB = DB.get();
+  const session = JSON.parse(localStorage.getItem('um_session'));
+  const room = AppDB.rooms.find(r => r.code === session.room);
+  const roomPlayers = AppDB.players.filter(p => p.room_code === room.code);
+
+  const sorted = [...roomPlayers].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if ((b.buchholz || 0) !== (a.buchholz || 0)) return (b.buchholz || 0) - (a.buchholz || 0);
+    return (a.bot_games || 0) - (b.bot_games || 0);
+  });
+
+  // 1. Создаем модалку, если ее нет
+  let modal = document.getElementById('playerFinalModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'playerFinalModal';
+    modal.className = 'modal active';
+    modal.style.alignItems = 'flex-start';
+    modal.style.overflowY = 'auto';
+
+    modal.innerHTML = `
+      <div style="width: 100%; max-width: 900px; margin: 20px auto; position: relative;">
+        <button onclick="document.getElementById('playerFinalModal').remove()" style="position: fixed; top: 15px; right: 15px; z-index: 10000; background: var(--black); border: 2px solid var(--pink); color: var(--pink); width: 40px; height: 40px; font-family: 'Bungee'; font-size: 20px; cursor: pointer; box-shadow: 4px 4px 0px var(--black);">✕</button>
+        <div id="playerStandingsCaptureArea"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  // 2. Теперь рендерим постер (контейнер уже существует)
+  renderStandingsForPlayer(sorted);
+};
+
+// Функция рендера постера (копия из admin.js)
+function renderStandingsForPlayer(players) {
+  const container = document.getElementById('playerStandingsCaptureArea');
+
+  if (!Array.isArray(players) || players.length === 0) {
+    container.innerHTML = `<div class="standings-empty">НЕТ РЕЗУЛЬТАТОВ</div>`;
+    return;
+  }
+
+  const escapeHTML = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  const getNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const formatNumber = (value) => Number.isInteger(value) ? String(value) : value.toFixed(2);
+
+  const podium = players.slice(0, 3);
+
+  const podiumHTML = podium.map((player, index) => {
+    const place = index + 1;
+    const classes = { 1: 'gold', 2: 'silver', 3: 'bronze' };
+    const crowns = { 1: '<span class="standing-crown">👑</span>', 2: '', 3: '' };
+
+    return `
+      <div class="standing-item ${classes[place]}">
+        ${crowns[place] || ''}
+        <div class="standing-place">#${place}</div>
+        <div class="standing-name">
+          ${escapeHTML(player.name)}
+          ${player.is_bot ? '<span class="standing-bot">БОТ</span>' : ''}
+        </div>
+        <div class="standing-stats">
+          <div class="standing-stat">
+            <span class="standing-stat-label">Очки</span>
+            <span class="standing-stat-value">${formatNumber(getNumber(player.score))}</span>
+          </div>
+          <div class="standing-stat">
+            <span class="standing-stat-label">Бухгольц</span>
+            <span class="standing-stat-value">${formatNumber(getNumber(player.buchholz))}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const restHTML = players.slice(3).map((player, index) => {
+    const place = index + 4;
+    return `
+      <div class="standing-row">
+        <div class="standing-row-place">#${place}</div>
+        <div class="standing-row-name">
+          ${escapeHTML(player.name)}
+          ${player.is_bot ? '<span class="standing-bot">БОТ</span>' : ''}
+        </div>
+        <div class="standing-row-stat">
+          ${formatNumber(getNumber(player.score))}
+          <small>ОЧКИ</small>
+        </div>
+        <div class="standing-row-stat">
+          ${formatNumber(getNumber(player.buchholz))}
+          <small>БУХГОЛЬЦ</small>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div id="standingsCaptureArea">
+      <header class="standings-header">
+        <img src="img/logo.png" alt="UNMATCHED" class="standings-logo">
+        <div class="standings-kicker">РЕЗУЛЬТАТЫ ТУРНИРА</div>
+        <h1 class="standings-title">ИТОГОВАЯ ТАБЛИЦА</h1>
+        <div class="standings-subtitle">БИТВА ОКОНЧЕНА</div>
+      </header>
+
+      ${podium.length ? `<section class="standings-podium">${podiumHTML}</section>` : ''}
+
+      ${restHTML ? `
+        <section class="standings-rest">
+          <div class="standings-section-title">ФИНАЛЬНЫЙ РЕЙТИНГ</div>
+          <div class="standings-list">${restHTML}</div>
+        </section>
+      ` : ''}
+
+      <footer class="standings-footer">
+        <div class="standings-footer-brand">UNMATCHED</div>
+        <div class="standings-footer-info">БЕЗ ПОЩАДЫ. БЕЗ РЕВАНШЕЙ.</div>
+      </footer>
+    </div>
+  `;
 }
 
 // Запуск
