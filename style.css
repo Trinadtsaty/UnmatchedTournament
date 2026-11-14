@@ -110,7 +110,6 @@ body {
   text-align: center; transform: rotate(-1deg);
 }
 
-/* Логотип на экране входа */
 .login-logo {
   width: 100%;
   max-width: 280px;
@@ -195,7 +194,6 @@ body {
 }
 .round-info { font-family: 'Bebas Neue', cursive; font-size: 24px; color: var(--pink); letter-spacing: 1px; }
 
-/* Лого в шапке игрока */
 .topbar-logo {
   height: 28px;
   width: auto;
@@ -302,7 +300,6 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
 }
 .admin-panel h3 { font-family: 'Bungee', cursive; font-size: 16px; margin-bottom: 15px; color: var(--cyan); }
 
-/* Стили для логотипов в админке */
 .header-logo {
   height: 32px;
   width: auto;
@@ -372,24 +369,339 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
 .hero-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 
 /* ==========================================================================
-   Финальная таблица
+   UNMATCHED — FINAL STANDINGS POSTER (Neon Punk Brutalism)
    ========================================================================== */
-.standing-item {
-  display: flex; align-items: center; padding: 15px;
-  background: var(--surface-light); border: 3px solid var(--black);
-  margin-bottom: 10px;
+#standingsCaptureArea {
+  --gold: #F5E13B;
+  --silver: #C0C0C0;
+  --bronze: #CD7F32;
+
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px;
+  overflow: hidden;
+
+  color: var(--text);
+  background-color: var(--bg);
+
+  border: 4px solid var(--black);
+  box-shadow: 8px 8px 0 var(--black);
+
+  font-family: 'Space Grotesk', sans-serif;
+  isolation: isolate;
 }
-.standing-item.gold { border-color: var(--yellow); box-shadow: 4px 4px 0px var(--yellow); }
-.standing-item.silver { border-color: var(--muted); box-shadow: 4px 4px 0px var(--muted); }
-.standing-item.bronze { border-color: #cd7f32; box-shadow: 4px 4px 0px #cd7f32; }
 
-.standing-place { font-family: 'Bebas Neue', cursive; font-size: 28px; width: 50px; color: var(--muted); }
-.standing-item.gold .standing-place { color: var(--yellow); }
-.standing-item.silver .standing-place { color: var(--muted); }
-.standing-item.bronze .standing-place { color: #cd7f32; }
+#standingsCaptureArea::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 10% 15%, rgba(19, 221, 224, 0.15), transparent 28%),
+    radial-gradient(circle at 90% 80%, rgba(255, 38, 139, 0.15), transparent 30%),
+    repeating-linear-gradient(135deg, transparent 0px, transparent 30px, rgba(255,255,255,0.018) 31px, transparent 32px);
+}
 
-.standing-name { flex: 1; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; }
-.standing-score { font-family: 'Bungee', cursive; color: var(--cyan); font-size: 20px; }
+#standingsCaptureArea::after {
+  content: "UNMATCHED";
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  color: rgba(255,255,255,0.025);
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(90px, 18vw, 180px);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.standings-header {
+  text-align: center;
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+  border-bottom: 3px solid var(--black);
+  position: relative;
+}
+
+.standings-logo {
+  display: block;
+  width: min(80%, 440px);
+  max-height: 100px;
+  object-fit: contain;
+  margin: 0 auto 15px;
+  filter: drop-shadow(3px 3px 0px var(--pink));
+}
+
+.standings-kicker {
+  display: inline-block;
+  padding: 5px 14px;
+  background: var(--pink);
+  color: var(--black);
+  border: 2px solid var(--black);
+  box-shadow: 3px 3px 0 var(--black);
+  font-family: 'Bungee', cursive;
+  font-size: 11px;
+  letter-spacing: 2px;
+  transform: rotate(-2deg);
+}
+
+.standings-title {
+  margin: 15px 0 0;
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(42px, 8vw, 70px);
+  line-height: 0.95;
+  color: var(--cyan);
+  text-shadow: 4px 4px 0 var(--black);
+  letter-spacing: 3px;
+}
+
+.standings-subtitle {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.standings-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin: 30px 0 40px;
+}
+
+.standing-item {
+  position: relative;
+  min-width: 0;
+  padding: 20px 10px;
+  text-align: center;
+  background: var(--surface);
+  border: 3px solid var(--black);
+  box-shadow: 5px 5px 0 var(--black);
+}
+
+.standing-item.gold {
+  order: 2;
+  min-height: 260px;
+  background: #493817;
+  border-color: var(--gold);
+  box-shadow: 6px 6px 0 var(--black);
+  transform: translateY(-15px) rotate(-1deg);
+}
+
+.standing-item.silver {
+  order: 1;
+  min-height: 220px;
+  background: #30303C;
+  border-color: var(--silver);
+  transform: rotate(1deg);
+}
+
+.standing-item.bronze {
+  order: 3;
+  min-height: 200px;
+  background: #472A23;
+  border-color: var(--bronze);
+  transform: rotate(-1deg);
+}
+
+.standing-place {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 54px;
+  line-height: 1;
+  color: var(--text);
+  text-shadow: 3px 3px 0 var(--black);
+}
+
+.gold .standing-place {
+  color: var(--gold);
+  font-size: 68px;
+}
+
+.silver .standing-place { color: var(--silver); }
+.bronze .standing-place { color: var(--bronze); }
+
+.standing-crown {
+  display: block;
+  font-size: 34px;
+  margin-bottom: 5px;
+  filter: drop-shadow(2px 3px 0 var(--black));
+}
+
+.standing-name {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+  font-family: 'Bungee', cursive;
+  font-size: clamp(11px, 2vw, 16px);
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.gold .standing-name {
+  color: var(--gold);
+  font-size: clamp(13px, 2.2vw, 19px);
+  text-shadow: 0 0 12px rgba(245,225,59,0.4);
+}
+
+.standing-stats {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.standing-stat {
+  padding: 6px 8px;
+  min-width: 65px;
+  background: var(--black);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.standing-stat-label {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.standing-stat-value {
+  display: block;
+  margin-top: 3px;
+  color: var(--cyan);
+  font-family: 'Bebas Neue', cursive;
+  font-size: 22px;
+}
+
+.gold .standing-stat-value { color: var(--gold); }
+.silver .standing-stat-value { color: var(--silver); }
+.bronze .standing-stat-value { color: var(--bronze); }
+
+.standings-rest {
+  margin-top: 25px;
+}
+
+.standings-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: var(--pink);
+}
+
+.standings-section-title::after {
+  content: "";
+  flex: 1;
+  height: 3px;
+  background: var(--pink);
+}
+
+.standings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.standing-row {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) 70px 90px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: var(--surface);
+  border: 2px solid var(--black);
+  box-shadow: 3px 3px 0 var(--black);
+}
+
+.standing-row:nth-child(even) {
+  background: var(--surface-light);
+}
+
+.standing-row-place {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 26px;
+  color: var(--cyan);
+}
+
+.standing-row-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.standing-row-stat {
+  text-align: center;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 20px;
+  color: var(--cyan);
+}
+
+.standing-row-stat small {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.standing-bot {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 2px 6px;
+  background: var(--yellow);
+  color: var(--black);
+  border: 1px solid var(--black);
+  font-family: 'Bungee', cursive;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.standings-footer {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 3px solid var(--black);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.standings-footer-brand {
+  font-family: 'Bungee', cursive;
+  font-size: 12px;
+  color: var(--cyan);
+  text-shadow: 2px 2px 0 var(--black);
+}
+
+.standings-footer-info {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.standings-empty {
+  padding: 40px 15px;
+  text-align: center;
+  color: var(--pink);
+  font-family: 'Bebas Neue', cursive;
+  font-size: 32px;
+}
 
 /* ==========================================================================
    Адаптив
@@ -404,6 +716,50 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
   #tab-heroes > div { flex-direction: column; }
 }
 
+@media (max-width: 768px) {
+  .mobile-logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 5px 10px 10px 10px;
+    background: transparent;
+    border-bottom: none;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .mobile-logo-container img {
+    width: 85%;
+    max-width: 340px;
+    height: auto;
+    aspect-ratio: 4 / 1;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 0px var(--pink));
+  }
+  .desktop-logos, .topbar-logo, .header-logo, .header-logo-small {
+    display: none !important;
+  }
+}
+
+@media (max-width: 600px) {
+  #standingsCaptureArea { padding: 20px 10px; }
+  .standings-podium { gap: 6px; }
+  .standing-item { padding: 14px 5px; }
+  .standing-item.gold { min-height: 225px; }
+  .standing-item.silver { min-height: 190px; }
+  .standing-item.bronze { min-height: 175px; }
+  .standing-place { font-size: 38px; }
+  .gold .standing-place { font-size: 48px; }
+  .standing-stat { min-width: 0; width: 100%; padding: 5px 2px; }
+  .standing-row {
+    grid-template-columns: 35px minmax(0, 1fr) 48px 60px;
+    gap: 5px;
+    padding: 10px 6px;
+  }
+  .standing-row-name { font-size: 11px; }
+  .standing-row-stat { font-size: 17px; }
+}
+
 @media (max-width: 500px) {
   .topbar-logo { display: none; }
   .header-logo { height: 22px; }
@@ -411,7 +767,7 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
 }
 
 /* ==========================================================================
-   ИНДИКАЦИЯ (Только желтый цвет, чтобы не сливалось)
+   ИНДИКАЦИЯ (Только желтый цвет)
    ========================================================================== */
 .score-btn.active, .goes-first-btn.active, .miss-btn.active {
   background: var(--yellow) !important;
@@ -429,41 +785,8 @@ tr.me { background: var(--surface-light); border-left: 6px solid var(--pink); co
 }
 
 /* ==========================================================================
-   МОБИЛЬНЫЙ ЛОГОТИП ПОД ШАПКОЙ
+   МОБИЛЬНЫЙ ЛОГОТИП ПОД ШАПКОЙ (Скрыт на ПК)
    ========================================================================== */
 .mobile-logo-container {
-  display: none; /* По умолчанию скрыт на ПК */
-}
-
-@media (max-width: 768px) {
-  /* Показываем контейнер на телефонах */
-  .mobile-logo-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    padding: 5px 10px 10px 10px;
-    background: transparent;
-    border-bottom: none;
-    flex-shrink: 0;
-    z-index: 10;
-  }
-
-  /* Логотип побольше */
-  .mobile-logo-container img {
-    width: 85%; /* Увеличили до 85% */
-    max-width: 340px; /* И подняли максимальный предел */
-    height: auto;
-    aspect-ratio: 4 / 1;
-    object-fit: contain;
-    filter: drop-shadow(2px 2px 0px var(--pink));
-  }
-
-  /* Прячем маленькие логотипы из шапки на мобилках */
-  .desktop-logos, .topbar-logo, .header-logo, .header-logo-small {
-    display: none !important;
-  }
-}
-@media (max-width: 768px) {
-  .desktop-logos { display: none !important; }
+  display: none;
 }

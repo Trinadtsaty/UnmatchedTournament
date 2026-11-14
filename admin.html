@@ -33,9 +33,7 @@
     <header style="background: var(--surface); border-bottom: 4px solid var(--black); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 70px;">
       <!-- Левая часть: Оба Логотипа и Вкладки -->
       <div style="display: flex; align-items: center; gap: 15px;">
-        <!-- Маленькая U -->
         <img src="img/logo_u.png" alt="U" class="header-logo-small" onerror="this.style.display='none'">
-        <!-- Полная надпись -->
         <img src="img/logo.png" alt="UNMATCHED" class="header-logo" onerror="this.style.display='none'">
 
         <nav style="display: flex; gap: 5px; margin-left: 20px;">
@@ -129,7 +127,7 @@
       <h2>Новая комната</h2>
       <div class="field">
         <label>Кол-во игроков (4-12)</label>
-        <input type="range" id="maxPlayersRange" min="4" max="12" value="4" style="width:100%; accent-color: var(--cyan);">
+        <input type="range" id="maxPlayersRange" min="4" max="12" step="2" value="4" style="width:100%; accent-color: var(--cyan);">
         <input type="number" id="maxPlayersInput" min="4" max="12" value="4" style="width:100%; margin-top:5px;">
       </div>
       <div class="field">
@@ -175,7 +173,6 @@
           <div id="editP2Name" style="font-family: 'Bebas Neue'; font-size: 24px; flex: 1; text-align: center; color: var(--text); transition: all 0.2s;">Игрок 2</div>
         </div>
 
-        <!-- Крупный индикатор счета -->
         <div id="modalScoreDisplay" style="text-align:center; font-family: 'Bebas Neue'; font-size: 40px; color: var(--yellow); margin-bottom: 15px; letter-spacing: 2px; text-shadow: 2px 2px 0 var(--black);">- : -</div>
 
         <div style="display: flex; gap: 10px;">
@@ -226,7 +223,7 @@
     </div>
   </div>
 
-  <!-- Модалка: Заполнение долгов (Баннер 1) -->
+  <!-- Модалка: Заполнение долгов -->
   <div id="missingScoresModal" class="modal">
     <div class="modal-content" style="max-width: 600px;">
       <button class="modal-close" onclick="document.getElementById('missingScoresModal').classList.remove('active')">✕</button>
@@ -240,7 +237,7 @@
     </div>
   </div>
 
-  <!-- Модалка: Проверка результатов (Баннер 2) -->
+  <!-- Модалка: Проверка результатов -->
   <div id="confirmRoundModal" class="modal">
     <div class="modal-content" style="border: 4px solid var(--pink); box-shadow: 10px 10px 0px var(--black);">
       <button class="modal-close" onclick="document.getElementById('confirmRoundModal').classList.remove('active')">✕</button>
@@ -266,21 +263,16 @@
     </div>
   </div>
 
-  <!-- Модалка: Финальная сетка -->
+  <!-- Модалка: Финальная сетка (ПОСТЕР) -->
   <div id="finalStandingsModal" class="modal">
-    <div class="modal-content" style="max-width: 600px; text-align: center;">
-      <button class="modal-close" onclick="document.getElementById('finalStandingsModal').classList.remove('active')">✕</button>
+    <div class="modal-content" style="max-width: 900px; background: transparent; border: none; box-shadow: none; padding: 0; transform: none;">
+      <button class="modal-close" style="z-index: 10;" onclick="document.getElementById('finalStandingsModal').classList.remove('active')">✕</button>
 
-      <div id="standingsCaptureArea" style="background: var(--surface); padding: 20px; border-radius: 0; border: 4px solid var(--black);">
-        <h2 style="color: var(--cyan); font-family: 'Bebas Neue'; font-size: 36px; margin-bottom: 20px; letter-spacing: 2px; text-shadow: 3px 3px 0 var(--pink);">UNMATCHED</h2>
-        <h3 style="color: var(--text); font-family: 'Bungee'; font-size: 14px; margin-bottom: 20px;">ФИНАЛЬНАЯ ТАБЛИЦА</h3>
-        <div id="finalStandingsList" style="font-size: 18px; text-align: left; display: flex; flex-direction: column; gap: 10px;"></div>
-        <div style="margin-top: 30px; font-size: 12px; color: var(--muted); text-align: center; font-family: 'Space Grotesk'; font-weight: bold;">Сгенерировано в турнирном модуле</div>
-      </div>
+      <!-- Контейнер, который JS заполнит постером -->
+      <div id="standingsCaptureArea"></div>
 
-      <div class="modal-actions" style="margin-top: 20px;">
-        <button id="downloadPngBtn" class="btn btn-primary" style="background: var(--cyan); color: var(--black);">📸 Скачать PNG</button>
-        <button onclick="document.getElementById('finalStandingsModal').classList.remove('active')" class="btn btn-lose">Закрыть</button>
+      <div class="modal-actions" style="margin-top: 20px; justify-content: center;">
+        <button id="downloadPngBtn" class="btn btn-primary" style="background: var(--cyan); color: var(--black); width: auto; padding: 10px 40px;">📸 Скачать PNG</button>
       </div>
     </div>
   </div>

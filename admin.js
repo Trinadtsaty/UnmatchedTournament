@@ -230,7 +230,6 @@ function renderRoomContent() {
               </tr></thead>
               <tbody>
                 ${currentMatches.map(m => {
-                  // Оставляем только иконку заметки
                   let statusIcon = '';
                   if (m.admin_note) statusIcon = '<span title="' + m.admin_note + '" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">⚠️</span>';
 
@@ -285,15 +284,12 @@ function startTournament() {
   let newMatches = [];
   let tableNum = 1;
 
-  if (!AppDB.tables || AppDB.tables.length === 0) {
-    AppDB.tables = [];
-    for(let i=1; i<=Math.ceil(players.length/2); i++) AppDB.tables.push({name: `Стол ${i}`});
-  }
-
   while (shuffled.length > 0) {
     const p1 = shuffled.pop();
     const p2 = shuffled.pop();
-    const mapName = AppDB.tables[(tableNum - 1) % AppDB.tables.length].name;
+    const mapName = (AppDB.tables && AppDB.tables.length > 0)
+      ? AppDB.tables[(tableNum - 1) % AppDB.tables.length].name
+      : `Стол ${tableNum}`;
 
     newMatches.push({
       id: Date.now() + Math.random(), room_code: room.code, round: 1,
@@ -449,7 +445,7 @@ document.getElementById('saveMatchBtn').addEventListener('click', () => {
   renderRoomContent();
 });
 
-// --- ПЕРЕХОД РАУНДА (ИСПРАВЛЕННЫЙ БАННЕР) ---
+// --- ПЕРЕХОД РАУНДА ---
 function handleNextRoundClick() {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
@@ -531,7 +527,6 @@ document.getElementById('fillMissingBtn').addEventListener('click', () => {
   showConfirmRoundModal();
 });
 
-// --- ПРОВЕРКА РЕЗУЛЬТАТОВ (ИСПРАВЛЕННЫЙ БАННЕР) ---
 function showConfirmRoundModal() {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
@@ -676,12 +671,27 @@ function generateNextRound(room, roomPlayers) {
 document.getElementById('newRoomBtn').addEventListener('click', () => document.getElementById('createModal').classList.add('active'));
 
 document.getElementById('confirmCreateBtn').addEventListener('click', () => {
-  const maxPlayers = parseInt(document.getElementById('maxPlayersInput').value);
+  let maxPlayers = parseInt(document.getElementById('maxPlayersInput').value);
+
+  if (maxPlayers % 2 !== 0) {
+    maxPlayers = maxPlayers + 1;
+    if (maxPlayers > 12) maxPlayers = 12;
+    if (maxPlayers < 4) maxPlayers = 4;
+    document.getElementById('maxPlayersInput').value = maxPlayers;
+  }
+
   const heroesPerPlayer = parseInt(document.getElementById('heroesPerPlayerInput').value);
   const totalRounds = parseInt(document.getElementById('roundsInput').value);
 
   const code = Math.random().toString(36).substring(2, 6).toUpperCase();
   AppDB = DB.get();
+
+  const tableCount = maxPlayers / 2;
+  AppDB.tables = [];
+  for (let i = 1; i <= tableCount; i++) {
+    AppDB.tables.push({ id: Date.now() + i, name: `Стол ${i}` });
+  }
+
   AppDB.rooms.push({ code, maxPlayers, heroesPerPlayer, totalRounds, round: 0, status: 'waiting' });
   DB.set(AppDB);
 
@@ -691,7 +701,116 @@ document.getElementById('confirmCreateBtn').addEventListener('click', () => {
   renderSidebar();
 });
 
-// --- ФИНАЛЬНАЯ ТАБЛИЦА ---
+// ==========================================================================
+// ФИНАЛЬНАЯ ТАБЛИЦА (ПОСТЕР)
+// ==========================================================================
+function renderStandings(players) {
+  const container = document.getElementById('standingsCaptureArea');
+
+  if (!container) {
+    console.error('standingsCaptureArea not found');
+    return;
+  }
+
+  if (!Array.isArray(players) || players.length === 0) {
+    container.innerHTML = `
+      <div class="standings-empty">
+        NO RESULTS AVAILABLE
+      </div>
+    `;
+    return;
+  }
+
+  const escapeHTML = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const getNumber = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+  };
+
+  const formatNumber = (value) => {
+    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  };
+
+  const podium = players.slice(0, 3);
+
+  const podiumHTML = podium.map((player, index) => {
+    const place = index + 1;
+    const classes = { 1: 'gold', 2: 'silver', 3: 'bronze' };
+    const crowns = { 1: '<span class="standing-crown">👑</span>', 2: '', 3: '' };
+
+    return `
+      <div class="standing-item ${classes[place]}">
+        ${crowns[place] || ''}
+        <div class="standing-place">#${place}</div>
+        <div class="standing-name">
+          ${escapeHTML(player.name)}
+          ${player.is_bot ? '<span class="standing-bot">БОТ</span>' : ''}
+        </div>
+        <div class="standing-stats">
+          <div class="standing-stat">
+            <span class="standing-stat-label">Очки</span>
+            <span class="standing-stat-value">${formatNumber(getNumber(player.score))}</span>
+          </div>
+          <div class="standing-stat">
+            <span class="standing-stat-label">Бухгольц</span>
+            <span class="standing-stat-value">${formatNumber(getNumber(player.buchholz))}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const restHTML = players.slice(3).map((player, index) => {
+    const place = index + 4;
+    return `
+      <div class="standing-row">
+        <div class="standing-row-place">#${place}</div>
+        <div class="standing-row-name">
+          ${escapeHTML(player.name)}
+          ${player.is_bot ? '<span class="standing-bot">БОТ</span>' : ''}
+        </div>
+        <div class="standing-row-stat">
+          ${formatNumber(getNumber(player.score))}
+          <small>ОЧКИ</small>
+        </div>
+        <div class="standing-row-stat">
+          ${formatNumber(getNumber(player.buchholz))}
+          <small>БУХГОЛЬЦ</small>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <header class="standings-header">
+      <img src="img/logo.png" alt="UNMATCHED" class="standings-logo">
+      <div class="standings-kicker">TOURNAMENT RESULTS</div>
+      <h1 class="standings-title">FINAL STANDINGS</h1>
+      <div class="standings-subtitle">THE BATTLE IS OVER</div>
+    </header>
+
+    ${podium.length ? `<section class="standings-podium">${podiumHTML}</section>` : ''}
+
+    ${restHTML ? `
+      <section class="standings-rest">
+        <div class="standings-section-title">FINAL RANKING</div>
+        <div class="standings-list">${restHTML}</div>
+      </section>
+    ` : ''}
+
+    <footer class="standings-footer">
+      <div class="standings-footer-brand">UNMATCHED</div>
+      <div class="standings-footer-info">NO MERCY. NO REMATCH.</div>
+    </footer>
+  `;
+}
+
 function showFinalStandings() {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
@@ -703,22 +822,7 @@ function showFinalStandings() {
     return (a.bot_games || 0) - (b.bot_games || 0);
   });
 
-  const list = document.getElementById('finalStandingsList');
-  list.innerHTML = sorted.map((p, i) => {
-    let placeClass = '';
-    if (i === 0) placeClass = 'gold';
-    else if (i === 1) placeClass = 'silver';
-    else if (i === 2) placeClass = 'bronze';
-
-    return `
-      <div class="standing-item ${placeClass}">
-        <div class="standing-place">${i + 1}</div>
-        <div class="standing-name">${p.name} ${p.is_bot ? '[БОТ]' : ''}</div>
-        <div class="standing-score">${p.score}</div>
-      </div>
-    `;
-  }).join('');
-
+  renderStandings(sorted);
   document.getElementById('finalStandingsModal').classList.add('active');
 }
 
@@ -770,9 +874,17 @@ sync('heroesPerPlayerRange', 'heroesPerPlayerInput');
 sync('roundsRange', 'roundsInput');
 
 document.getElementById('maxPlayersInput').addEventListener('input', (e) => {
-  const p = parseInt(e.target.value);
-  const rec = p >= 9 ? 4 : 3;
-  document.getElementById('recommendedRounds').textContent = rec;
+  let p = parseInt(e.target.value);
+
+  if (p % 2 !== 0) {
+    p = p + 1;
+    if (p > 12) p = 12;
+    if (p < 4) p = 4;
+    e.target.value = p;
+  }
+
+  const rec = p >= 10 ? 4 : 3;
+  document.getElementById('recommendedRounds').value = rec;
   document.getElementById('roundsInput').value = rec;
   document.getElementById('roundsRange').value = rec;
 });
