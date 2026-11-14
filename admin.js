@@ -292,7 +292,7 @@ function startTournament() {
       : `Стол ${tableNum}`;
 
     newMatches.push({
-      id: Date.now() + Math.random(), room_code: room.code, round: 1,
+      id: Date.now() + Math.floor(Math.random() * 1000), room_code: room.code, round: 1,
       table: `Стол ${tableNum}`, p1: p1.name, p2: p2.name,
       p1_score: null, p2_score: null, status: 'pending',
       map_name: mapName, p1_goes_first: null,
@@ -653,7 +653,7 @@ function generateNextRound(room, roomPlayers) {
   pairs.forEach((pair, index) => {
     const [p1, p2] = pair;
     newMatches.push({
-      id: Date.now() + Math.random(), room_code: room.code, round: room.round + 1,
+      id: Date.now() + Math.floor(Math.random() * 1000), room_code: room.code, round: room.round + 1,
       table: `Стол ${index + 1}`, p1: p1.name, p2: p2.name,
       p1_score: null, p2_score: null, status: 'pending',
       map_name: assignedMaps[index], p1_goes_first: null,
