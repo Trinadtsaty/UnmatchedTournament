@@ -124,11 +124,11 @@ const DB = {
         if (playersError) console.error('Ошибка сохранения игроков:', playersError);
       }
 
-      // 4. Столы (ТЕПЕРЬ С room_code!)
+      // 4. Столы
       if (data.tables.length) {
         const tablesToSync = data.tables.map(t => ({
           id: t.id,
-          room_code: t.room_code, // <--- Важное изменение
+          room_code: t.room_code,
           name: t.name
         }));
         const { error: tablesError } = await dbClient.from('tables').upsert(tablesToSync);
@@ -137,7 +137,11 @@ const DB = {
 
       // 5. Герои
       if (data.heroes.length) {
-        const { error: heroesError } = await dbClient.from('heroes').upsert(data.heroes);
+        const heroesToSync = data.heroes.map(h => ({
+          name: h.name,
+          image: h.image
+        }));
+        const { error: heroesError } = await dbClient.from('heroes').upsert(heroesToSync);
         if (heroesError) console.error('Ошибка сохранения героев:', heroesError);
       }
 
@@ -168,6 +172,14 @@ const DB = {
         const newIds = data.tables.map(t => t.id);
         const toDelete = dbTables.filter(t => !newIds.includes(t.id)).map(t => t.id);
         if (toDelete.length > 0) await dbClient.from('tables').delete().in('id', toDelete);
+      }
+
+      // ДОБАВЛЕНО: Удаление героев
+      const { data: dbHeroes } = await dbClient.from('heroes').select('name');
+      if (dbHeroes) {
+        const newNames = data.heroes.map(h => h.name);
+        const toDelete = dbHeroes.filter(h => !newNames.includes(h.name)).map(h => h.name);
+        if (toDelete.length > 0) await dbClient.from('heroes').delete().in('name', toDelete);
       }
 
     } catch(e) {
