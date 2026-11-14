@@ -172,3 +172,22 @@ const DB = {
     }
   }
 };
+
+// WebSocket-подписка на все изменения в таблицах
+const realtimeChannel = dbClient
+  .channel('db-changes')
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public' }, // Слушаем всё: INSERT, UPDATE, DELETE
+    async (payload) => {
+      console.log('Realtime update:', payload);
+      // При любом изменении просто перезагружаем данные из БД
+      // и перерисовываем интерфейс
+      await DB.init();
+      if (typeof renderLeaderboard === 'function') renderLeaderboard();
+      if (typeof renderMatch === 'function') renderMatch();
+      if (typeof renderHeroes === 'function') renderHeroes();
+      if (typeof renderSidebar === 'function') renderSidebar();
+    }
+  )
+  .subscribe();
