@@ -62,10 +62,8 @@ const DB = {
         await dbClient.from('heroes').upsert(this.data.heroes);
       }
 
-      console.log("✅ Данные успешно загружены из Supabase");
     } catch (err) {
       console.error("Ошибка загрузки из БД:", err);
-      alert("Ошибка загрузки данных: " + err.message);
     }
   },
 
@@ -91,14 +89,8 @@ const DB = {
       }));
 
       if (roomsToSync.length) {
-        console.log('Отправка комнат в БД:', roomsToSync);
         const { error: roomsError } = await dbClient.from('rooms').upsert(roomsToSync);
-        if (roomsError) {
-          console.error('Ошибка upsert комнат:', roomsError);
-          alert('Ошибка сохранения комнаты: ' + roomsError.message);
-        } else {
-          console.log('✅ Комнаты успешно сохранены');
-        }
+        if (roomsError) console.error('Ошибка сохранения комнат:', roomsError);
       }
 
       // 2. Матчи
@@ -123,28 +115,28 @@ const DB = {
 
       if (matchesToSync.length) {
         const { error: matchesError } = await dbClient.from('matches').upsert(matchesToSync);
-        if (matchesError) console.error('Ошибка upsert матчей:', matchesError);
+        if (matchesError) console.error('Ошибка сохранения матчей:', matchesError);
       }
 
       // 3. Игроки
       if (data.players.length) {
         const { error: playersError } = await dbClient.from('players').upsert(data.players);
-        if (playersError) console.error('Ошибка upsert игроков:', playersError);
+        if (playersError) console.error('Ошибка сохранения игроков:', playersError);
       }
 
       // 4. Столы
       if (data.tables.length) {
         const { error: tablesError } = await dbClient.from('tables').upsert(data.tables);
-        if (tablesError) console.error('Ошибка upsert столов:', tablesError);
+        if (tablesError) console.error('Ошибка сохранения столов:', tablesError);
       }
 
       // 5. Герои
       if (data.heroes.length) {
         const { error: heroesError } = await dbClient.from('heroes').upsert(data.heroes);
-        if (heroesError) console.error('Ошибка upsert героев:', heroesError);
+        if (heroesError) console.error('Ошибка сохранения героев:', heroesError);
       }
 
-      // 6. Удаление
+      // 6. Удаление того, что стерли в интерфейсе
       const { data: dbRooms } = await dbClient.from('rooms').select('code');
       if (dbRooms) {
         const newCodes = data.rooms.map(r => r.code);
@@ -168,26 +160,6 @@ const DB = {
 
     } catch(e) {
       console.error("Ошибка синхронизации с БД:", e);
-      alert("Ошибка синхронизации: " + e.message);
     }
   }
 };
-
-// WebSocket-подписка на все изменения в таблицах
-const realtimeChannel = dbClient
-  .channel('db-changes')
-  .on(
-    'postgres_changes',
-    { event: '*', schema: 'public' }, // Слушаем всё: INSERT, UPDATE, DELETE
-    async (payload) => {
-      console.log('Realtime update:', payload);
-      // При любом изменении просто перезагружаем данные из БД
-      // и перерисовываем интерфейс
-      await DB.init();
-      if (typeof renderLeaderboard === 'function') renderLeaderboard();
-      if (typeof renderMatch === 'function') renderMatch();
-      if (typeof renderHeroes === 'function') renderHeroes();
-      if (typeof renderSidebar === 'function') renderSidebar();
-    }
-  )
-  .subscribe();

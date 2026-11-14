@@ -48,7 +48,7 @@ async function handleLogin() {
       is_bot: false,
       bot_games: 0
     });
-    DB.set(AppDB);
+    await DB.set(AppDB);
   }
 
   localStorage.setItem('um_session', JSON.stringify({ name, room: roomCode }));
@@ -99,12 +99,31 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
   });
 });
 
+// --- ТАЙМЕР АВТООБНОВЛЕНИЯ (КАЖДЫЕ 10 СЕКУНД) ---
+setInterval(async () => {
+  const session = JSON.parse(localStorage.getItem('um_session'));
+  if (!session) return; // Если не залогинен, не обновляем
+
+  try {
+    await DB.init();
+    AppDB = DB.get();
+
+    // Перерисовываем активные элементы
+    renderLeaderboard();
+    renderMatch();
+    renderHeroes();
+  } catch(e) {
+    console.error("Ошибка при автообновлении:", e);
+  }
+}, 10000);
+
 // --- РЕНДЕР ВКЛАДОК ---
 
 function renderLeaderboard() {
   AppDB = DB.get();
   const session = JSON.parse(localStorage.getItem('um_session'));
   const room = AppDB.rooms.find(r => r.code === session.room);
+  if (!room) return;
 
   const players = AppDB.players
     .filter(p => p.room_code === session.room)
@@ -165,6 +184,71 @@ function renderMatch() {
   const isP1 = myMatch.p1 === currentUser;
   const opponent = isP1 ? myMatch.p2 : myMatch.p1;
 
+  let statusHtml = '';
+
+  if (myMatch.status === 'pending') {
+    statusHtml = `
+      <div class="actions-block">
+        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px;">Введите результат встречи:</p>
+        <button class="btn btn-win" onclick="reportResult(${myMatch.id}, 'p1_win')">Победа (2:0)</button>
+        <button class="btn btn-draw" onclick="reportResult(${myMatch.id}, 'draw')">Ничья (1:1)</button>
+        <button class="btn btn-lose" onclick="reportResult(${myMatch.id}, 'p2_win')">Поражение (0:2)</button>
+      </div>
+    `;
+  } else if (myMatch.status === 'reported_by_p1' && !isP1) {
+    // Соперник (P1) заявил результат, а мы (P2) видим подтверждение
+    statusHtml = `
+      <div class="actions-block" style="background: var(--surface-light); padding: 15px; border: 2px solid var(--black);">
+        <p style="text-align: center; color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 15px;">
+          Соперник заявил результат: <span style="color: var(--yellow); font-size: 20px;">${myMatch.p1_score} : ${myMatch.p2_score}</span>
+        </p>
+        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 15px;">Вы согласны?</p>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-win" onclick="confirmResult(${myMatch.id})">Да, подтвердить</button>
+          <button class="btn btn-lose" onclick="disputeResult(${myMatch.id})">Нет, оспорить</button>
+        </div>
+      </div>
+    `;
+  } else if (myMatch.status === 'reported_by_p2' && isP1) {
+    // Соперник (P2) заявил результат, а мы (P1) видим подтверждение
+    statusHtml = `
+      <div class="actions-block" style="background: var(--surface-light); padding: 15px; border: 2px solid var(--black);">
+        <p style="text-align: center; color: var(--text); font-size: 16px; font-weight: bold; margin-bottom: 15px;">
+          Соперник заявил результат: <span style="color: var(--yellow); font-size: 20px;">${myMatch.p1_score} : ${myMatch.p2_score}</span>
+        </p>
+        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 15px;">Вы согласны?</p>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-win" onclick="confirmResult(${myMatch.id})">Да, подтвердить</button>
+          <button class="btn btn-lose" onclick="disputeResult(${myMatch.id})">Нет, оспорить</button>
+        </div>
+      </div>
+    `;
+  } else if (myMatch.status === 'disputed') {
+    statusHtml = `
+      <div style="text-align: center; padding: 20px; background: rgba(255, 38, 139, 0.1); border: 2px solid var(--pink);">
+        <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
+        <div style="color: var(--pink); font-weight: bold; font-size: 16px;">Спор!</div>
+        <div style="color: var(--muted); font-size: 14px; margin-top: 5px;">Ожидайте решения админа.</div>
+      </div>
+    `;
+  } else if (myMatch.status === 'reported' || myMatch.status === 'confirmed') {
+    // Оба согласились или админ подтвердил
+    statusHtml = `
+      <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
+        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px; text-shadow: 2px 2px 0px var(--black);">${myMatch.p1_score} : ${myMatch.p2_score}</div>
+        <div style="color: var(--cyan); font-size: 14px;">Результат подтвержден</div>
+      </div>
+    `;
+  } else if (myMatch.status === 'reported_by_p1' || myMatch.status === 'reported_by_p2') {
+    // Мы сами заявили результат, ждем соперника
+    statusHtml = `
+      <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
+        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px;">${myMatch.p1_score} : ${myMatch.p2_score}</div>
+        <div style="color: var(--muted); font-size: 14px;">Ожидайте подтверждения от соперника...</div>
+      </div>
+    `;
+  }
+
   container.innerHTML = `
     <div class="match-table-num" style="display: flex; justify-content: center; gap: 10px;">
       <span>Стол: <b style="color: var(--cyan);">${myMatch.table}</b></span>
@@ -174,27 +258,15 @@ function renderMatch() {
 
     <div class="vs-block">
       <div class="player-block">
-        <div class="player-name">${currentUser}</div>
+        <div class="player-name">${myMatch.p1}</div>
       </div>
       <div class="vs-text">VS</div>
       <div class="player-block">
-        <div class="player-name">${opponent}</div>
+        <div class="player-name">${myMatch.p2}</div>
       </div>
     </div>
 
-    ${myMatch.p1_score !== null ? `
-      <div style="text-align: center; padding: 20px; background: var(--surface-light); border: 2px solid var(--black);">
-        <div style="font-size: 40px; font-family: 'Bebas Neue'; color: var(--yellow); margin-bottom: 10px; text-shadow: 2px 2px 0px var(--black);">${myMatch.p1_score} : ${myMatch.p2_score}</div>
-        <div style="color: var(--muted); font-size: 14px;">${myMatch.status === 'reported' ? 'Ожидайте подтверждения от админа' : 'Матч завершен'}</div>
-      </div>
-    ` : `
-      <div class="actions-block">
-        <p style="text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px;">Введите результат встречи:</p>
-        <button class="btn btn-win" onclick="reportResult(${myMatch.id}, 'p1_win')">Победа (2:0)</button>
-        <button class="btn btn-draw" onclick="reportResult(${myMatch.id}, 'draw')">Ничья (1:1)</button>
-        <button class="btn btn-lose" onclick="reportResult(${myMatch.id}, 'p2_win')">Поражение (0:2)</button>
-      </div>
-    `}
+    ${statusHtml}
   `;
 }
 
@@ -203,14 +275,40 @@ window.reportResult = function(matchId, type) {
   const match = AppDB.matches.find(m => m.id === matchId);
   if (!match) return;
 
+  const isP1 = match.p1 === currentUser;
+
   if (type === 'p1_win') { match.p1_score = 2; match.p2_score = 0; }
   if (type === 'draw') { match.p1_score = 1; match.p2_score = 1; }
   if (type === 'p2_win') { match.p1_score = 0; match.p2_score = 2; }
 
-  match.status = 'reported';
+  // Ставим статус в зависимости от того, кто нажал
+  match.status = isP1 ? 'reported_by_p1' : 'reported_by_p2';
+
   DB.set(AppDB);
   renderMatch();
-  alert('Результат отправлен! Админ увидит его и подтвердит.');
+  alert('Результат отправлен! Ожидайте подтверждения соперника.');
+};
+
+window.confirmResult = function(matchId) {
+  AppDB = DB.get();
+  const match = AppDB.matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  match.status = 'reported'; // Оба согласны
+  DB.set(AppDB);
+  renderMatch();
+  alert('Вы подтвердили результат. Ожидайте проверки админа.');
+};
+
+window.disputeResult = function(matchId) {
+  AppDB = DB.get();
+  const match = AppDB.matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  match.status = 'disputed'; // Спор
+  DB.set(AppDB);
+  renderMatch();
+  alert('Вы оспорили результат. Админ будет уведомлен.');
 };
 
 function renderHeroes() {
@@ -253,7 +351,6 @@ window.showPlayerFinalStandings = function() {
     return (a.bot_games || 0) - (b.bot_games || 0);
   });
 
-  // 1. Создаем модалку, если ее нет
   let modal = document.getElementById('playerFinalModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -271,11 +368,10 @@ window.showPlayerFinalStandings = function() {
     document.body.appendChild(modal);
   }
 
-  // 2. Теперь рендерим постер (контейнер уже существует)
   renderStandingsForPlayer(sorted);
 };
 
-// Функция рендера постера (копия из admin.js)
+// Функция рендера постера
 function renderStandingsForPlayer(players) {
   const container = document.getElementById('playerStandingsCaptureArea');
 

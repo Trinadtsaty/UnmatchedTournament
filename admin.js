@@ -20,6 +20,32 @@ async function initAdmin() {
   await DB.init();
   AppDB = DB.get();
   if (!AppDB.tables) AppDB.tables = [];
+
+  renderSidebar();
+
+  // --- ТАЙМЕР АВТООБНОВЛЕНИЯ (КАЖДЫЕ 10 СЕК) ---
+  setInterval(async () => {
+    // Если открыта модалка, не обновляем, чтобы не стереть ввод
+    if (document.querySelector('.modal.active')) return;
+
+    try {
+      await DB.init();
+      AppDB = DB.get();
+
+      const activeTab = document.querySelector('.nav-tab.active').dataset.tab;
+      if (activeTab === 'tournament') {
+        renderSidebar();
+      } else if (activeTab === 'players' && window.renderAdminPlayers) {
+        window.renderAdminPlayers();
+      } else if (activeTab === 'heroes' && window.renderAdminHeroes) {
+        window.renderAdminHeroes();
+      } else if (activeTab === 'tables' && window.renderAdminTables) {
+        window.renderAdminTables();
+      }
+    } catch(e) {
+      console.error("Ошибка автообновления", e);
+    }
+  }, 10000);
 }
 
 // --- АВТОРИЗАЦИЯ ---
@@ -29,7 +55,7 @@ document.getElementById('adminLoginBtn').addEventListener('click', () => {
   if (login === 'admin' && pass === 'admin') {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'flex';
-    renderSidebar();
+    initAdmin();
   } else {
     alert('Неверный логин или пароль!');
   }
@@ -231,7 +257,9 @@ function renderRoomContent() {
               <tbody>
                 ${currentMatches.map(m => {
                   let statusIcon = '';
-                  if (m.admin_note) statusIcon = '<span title="' + m.admin_note + '" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">⚠️</span>';
+                  if (m.admin_note) statusIcon += '<span title="' + m.admin_note + '" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">⚠️</span>';
+                  if (m.status === 'disputed') statusIcon += '<span title="Оспорено игроками!" style="color: var(--pink); margin-left: 5px; font-size: 16px; cursor: help;">🛑</span>';
+                  if (m.status === 'reported_by_p1' || m.status === 'reported_by_p2') statusIcon += '<span title="Ожидает подтверждения" style="color: var(--yellow); margin-left: 5px; font-size: 16px;">⏳</span>';
 
                   return `
                   <tr>
@@ -427,7 +455,8 @@ document.getElementById('saveMatchBtn').addEventListener('click', () => {
   if (match.round === room.round) {
     match.p1_score = tempMatchResult.p1;
     match.p2_score = tempMatchResult.p2;
-    if (match.p1_score !== null && match.p2_score !== null) match.status = 'reported';
+    // Админ принудительно ставит статус confirmed, так как он всё проверил
+    if (match.p1_score !== null && match.p2_score !== null) match.status = 'confirmed';
   }
 
   match.map_name = document.getElementById('editMapName').value.trim();
@@ -450,7 +479,9 @@ function handleNextRoundClick() {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
   const currentMatches = AppDB.matches.filter(m => m.room_code === room.code && m.round === room.round);
-  const missing = currentMatches.filter(m => m.status === 'pending');
+
+  // Ищем всё, что не подтверждено
+  const missing = currentMatches.filter(m => m.status !== 'confirmed');
 
   if (missing.length > 0) {
     tempMissScores = {};
@@ -461,6 +492,8 @@ function handleNextRoundClick() {
           <span style="color: var(--cyan);">${m.table}</span>
           <span style="font-size:11px; color:var(--muted);">${m.map_name}</span>
         </div>
+
+        ${m.status === 'disputed' ? '<div style="color: var(--pink); font-weight: bold; font-size: 12px; margin-bottom: 5px; text-align: center;">⚠️ Спор! Требуется решение</div>' : ''}
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <span style="font-weight: 600; width: 30%; text-align: left;">${m.p1}</span>
@@ -509,11 +542,11 @@ document.getElementById('fillMissingBtn').addEventListener('click', () => {
 
   let allFilled = true;
   currentMatches.forEach(m => {
-    if (m.status === 'pending') {
+    if (m.status !== 'confirmed') {
       if (tempMissScores[m.id]) {
         m.p1_score = tempMissScores[m.id].p1;
         m.p2_score = tempMissScores[m.id].p2;
-        m.status = 'reported';
+        m.status = 'confirmed'; // Админ подтвердил вручную
       } else {
         allFilled = false;
       }
@@ -552,6 +585,8 @@ document.getElementById('confirmRoundBtn').addEventListener('click', () => {
   AppDB = DB.get();
   const room = AppDB.rooms.find(r => r.code === activeRoomCode);
   const currentMatches = AppDB.matches.filter(m => m.room_code === room.code && m.round === room.round);
+
+  // Все матчи уже должны быть confirmed, но на всякий случай еще раз
   currentMatches.forEach(m => {
     if (m.p1_score !== null && m.p2_score !== null) m.status = 'confirmed';
   });
@@ -707,35 +742,16 @@ document.getElementById('confirmCreateBtn').addEventListener('click', () => {
 function renderStandings(players) {
   const container = document.getElementById('standingsCaptureArea');
 
-  if (!container) {
-    console.error('standingsCaptureArea not found');
-    return;
-  }
+  if (!container) return;
 
   if (!Array.isArray(players) || players.length === 0) {
-    container.innerHTML = `
-      <div class="standings-empty">
-        НЕТ РЕЗУЛЬТАТОВ
-      </div>
-    `;
+    container.innerHTML = `<div class="standings-empty">НЕТ РЕЗУЛЬТАТОВ</div>`;
     return;
   }
 
-  const escapeHTML = (value) => String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-  const getNumber = (value) => {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
-  };
-
-  const formatNumber = (value) => {
-    return Number.isInteger(value) ? String(value) : value.toFixed(2);
-  };
+  const escapeHTML = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  const getNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const formatNumber = (value) => Number.isInteger(value) ? String(value) : value.toFixed(2);
 
   const podium = players.slice(0, 3);
 
@@ -888,5 +904,3 @@ document.getElementById('maxPlayersInput').addEventListener('input', (e) => {
   document.getElementById('roundsInput').value = rec;
   document.getElementById('roundsRange').value = rec;
 });
-
-initAdmin();
