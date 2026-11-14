@@ -13,7 +13,7 @@
   <div id="loginScreen" class="screen active">
     <div class="login-box">
       <img src="img/holmes.jpg" alt="Sherlock" class="login-avatar">
-      <h1>ADMIN</h1>
+      <img src="img/logo.png" alt="UNMATCHED" class="login-logo">
       <p class="subtitle">Панель организатора</p>
       <div class="input-group">
         <label>Логин</label>
@@ -31,10 +31,14 @@
   <div id="adminPanel" style="display: none; flex-direction: column; height: 100vh;">
 
     <header style="background: var(--surface); border-bottom: 4px solid var(--black); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 70px;">
-      <!-- Левая часть: Логотип и Вкладки -->
-      <div style="display: flex; align-items: center; gap: 30px;">
-        <img src="img/logo_u.png" alt="U" class="header-logo" onerror="this.style.display='none'">
-        <nav style="display: flex; gap: 5px;">
+      <!-- Левая часть: Оба Логотипа и Вкладки -->
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <!-- Маленькая U -->
+        <img src="img/logo_u.png" alt="U" class="header-logo-small" onerror="this.style.display='none'">
+        <!-- Полная надпись -->
+        <img src="img/logo.png" alt="UNMATCHED" class="header-logo" onerror="this.style.display='none'">
+
+        <nav style="display: flex; gap: 5px; margin-left: 20px;">
           <button class="nav-tab active" data-tab="tournament">Турнир</button>
           <button class="nav-tab" data-tab="heroes">Герои</button>
           <button class="nav-tab" data-tab="players">Игроки</button>
@@ -52,14 +56,14 @@
     <main style="flex: 1; display: flex; overflow: hidden;">
 
       <!-- ВКЛАДКА: ТУРНИР -->
-      <div id="tab-tournament" class="tab-content active" style="display: flex; width: 100%;">
+      <div id="tab-tournament" class="tab-content active">
         <aside class="room-sidebar">
           <button id="newRoomBtn" class="btn btn-primary" style="flex-shrink: 0;">+ Новая комната</button>
           <div id="roomList"></div>
-          <div id="emptyRoomsMsg" style="color: var(--muted); font-family: 'Bungee'; font-size: 12px; text-align: center; margin-top: 20px; flex-shrink: 0;">Нет комнат</div>
+          <div id="emptyRoomsMsg" style="color: var(--muted); font-family: 'Bungee'; font-size: 12px; text-align: center; margin-top: 20px; flex-shrink: 0; display: none;">Нет комнат</div>
         </aside>
         <div id="roomContent" style="flex: 1; padding: 20px; overflow-y: auto;">
-          <p style="color: var(--muted); font-family: 'Bungee';">Выберите комнату слева</p>
+          <p style="color: var(--muted); font-family: Bungee;">Выберите комнату слева или создайте новую</p>
         </div>
       </div>
 
